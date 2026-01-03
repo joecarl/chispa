@@ -1,5 +1,6 @@
 import { component, computed, signal } from 'chispa';
 import { DemoTable } from '../demo-table-component/demo-table-component';
+import { DemoForm } from '../demo-form-component/demo-form-component';
 import tpl from './my-app-component.html';
 
 interface IDivSimpaticoProps {
@@ -34,5 +35,6 @@ export const MyApp = component(() => {
 			},
 		},
 		demoTableAnchor: DemoTable(),
+		demoFormAnchor: DemoForm(),
 	});
 });
