@@ -1,0 +1,36 @@
+import { component, computed, signal } from 'chispa';
+import tpl from './my-component.html';
+
+interface IDivSimpaticoProps {
+	length: number;
+}
+const DivSimpatico = component<IDivSimpaticoProps>((props) => {
+	const text = computed(() => {
+		const length = props.length.get();
+		if (length < 2) return '?';
+		if (length < 5) return 'Sigue';
+		if (length < 9) return 'Sigue, sigue';
+		if (length < 15) return 'Nada mal, continúa';
+		if (length < 20) return 'Suficiente';
+		return '¡Ya vale! como sigas así, esto va a acabar mal';
+	});
+
+	return tpl.eldiv({
+		inner: text,
+		style: { width: computed(() => 2 * props.length.get() + 'em') },
+	});
+});
+
+export const MyApp = component(() => {
+	const length = signal(1);
+
+	return tpl.fragment({
+		elspan: { inner: length },
+		eldiv: DivSimpatico({ length }),
+		incBtn: {
+			onclick: () => {
+				length.update((v) => v + 1);
+			},
+		},
+	});
+});

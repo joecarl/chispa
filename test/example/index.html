@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Chispa Example</title>
+</head>
+
+<body>
+	<div id="app"></div>
+	<script type="module" src="/src/main.ts"></script>
+</body>
+<style>
+	body {
+		font-family: Arial, sans-serif;
+		margin: 0;
+		padding: 20px;
+		background-color: #171717;
+		color: #7f8c8d;
+	}
+
+	.spark-demo {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	button {
+		padding: 10px 20px;
+		border: none;
+		border-radius: 4px;
+		background-color: #007acc;
+		color: white;
+		cursor: pointer;
+		font-size: 16px;
+	}
+
+	button:hover {
+		background-color: #005a9e;
+	}
+
+	.svalue {
+		color: #007acc;
+		font-weight: bold;
+		cursor: pointer;
+		padding: 0.1em 0.5em;
+		background-color: aquamarine;
+		border-radius: 0.2em;
+	}
+
+	.eldiv {
+		transition: all 0.2s ease;
+		height: 2em;
+		width: 2em;
+		background: #feb259;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5em;
+		color: white;
+		font-weight: bold;
+		border-radius: 0.5em;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-shadow: 0 0 5px #00000066;
+		font-size: 1.5em;
+	}
+
+	table {
+		border-collapse: collapse;
+		width: 800px;
+		margin: 20px 0;
+	}
+
+	.list-row {
+		td {
+			padding: 10px;
+			border-bottom: 1px solid #ddd;
+		}
+
+		.buttons-cell {
+			width: 0px;
+			text-align: right;
+		}
+
+		button {
+			padding: 5px 10px;
+			font-size: 12px;
+		}
+	}
+
+	th {
+		background-color: #f2f2f2;
+		text-align: left;
+		padding: 10px;
+		border-bottom: 2px solid #ddd;
+	}
+</style>
+
+</html>

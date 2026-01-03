@@ -1,0 +1,234 @@
+import { globalContext, IDisposable } from './context';
+import { computed, Signal, WritableSignal } from './signals';
+
+export type TProps = Record<string, Signal<any>>;
+export type TDict = Record<string, any>;
+export type WithSignals<T> = { [K in keyof T]: Signal<T[K]> };
+export type TComponentFactory<T extends TDict> = ((props: WithSignals<T>) => Node) | (() => Node);
+
+export class Component<T = any> {
+	public onUnmount: (() => void) | null = null;
+
+	public nodes: Node[] | null = null;
+
+	private container: Node | null = null;
+
+	private anchor: Node | null = null;
+
+	public disposables: IDisposable[] = [];
+
+	public silent = true;
+
+	constructor(private readonly factoryFn: TComponentFactory<T>, public readonly key: any = null, public readonly props: WithSignals<T> = null) {}
+
+	mount(container: Node, anchor: Node) {
+		if (!this.silent) console.log('Mounting Component', this);
+
+		this.container = container;
+		this.anchor = anchor;
+		globalContext.pushExecutionStack('createComponent');
+		globalContext.pushComponentStack(this);
+		const node = this.factoryFn ? (this.factoryFn as any)(this.props) : null;
+		globalContext.popComponentStack();
+		globalContext.popExecutionStack();
+		// if node is fragment, convert to array of nodes
+		if (node) {
+			if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+				this.nodes = Array.from(node.childNodes);
+			} else {
+				this.nodes = [node];
+			}
+		} else {
+			this.nodes = null;
+		}
+		this.insertNodes();
+	}
+
+	reanchor(anchor: Node | null) {
+		this.anchor = anchor;
+		if (!this.container || !this.nodes) return;
+
+		//console.log('reanchoring', this.nodes, ' before anchor', this.anchor);
+		this.insertNodes();
+	}
+
+	private insertNodes() {
+		// Insertar en la nueva posición
+		this.nodes.forEach((node) => {
+			if (this.anchor) {
+				this.container.insertBefore(node, this.anchor);
+			} else {
+				this.container.appendChild(node);
+			}
+		});
+	}
+
+	unmount() {
+		if (!this.silent) console.log('Unmounting Component', this);
+		if (this.onUnmount) {
+			this.onUnmount();
+			this.onUnmount = null;
+		}
+		if (this.nodes) {
+			this.nodes.forEach((node) => {
+				if (node && node.parentNode) {
+					node.parentNode.removeChild(node);
+				}
+			});
+		}
+		this.disposables.forEach((d) => {
+			d.dispose();
+		});
+		this.disposables = [];
+		this.nodes = null;
+		this.container = null;
+		this.anchor = null;
+	}
+}
+
+export function component<T extends Record<string, any>>(factory: TComponentFactory<T>) {
+	return (props?: WithSignals<T>) => {
+		return new Component(factory, null, props);
+	};
+}
+
+type ItemFactoryFn<T> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>) => Node;
+type KeyFn<T> = (item: T, index: number) => any;
+
+export class ComponentList<T = any> {
+	private readonly components: Map<string, Component>;
+	private container: Node;
+	private anchor: Node; // Nodes must be inserted before this node
+	private currentKeys: any[] = [];
+	public disposables: any[] = [];
+
+	constructor(private readonly itemFactoryFn: ItemFactoryFn<T>, private readonly keyFn: KeyFn<T>, private readonly itemsSignal: WritableSignal<T[]>) {
+		this.components = new Map();
+	}
+
+	/**
+	 * Obtiene todos los componentes
+	 */
+	private getAllComponents(): Component[] {
+		return Array.from(this.components.values());
+	}
+
+	/**
+	 * Limpia todos los componentes
+	 */
+	private clear(): void {
+		Array.from(this.components.values()).forEach((component) => {
+			this.removeComponent(component);
+		});
+	}
+
+	/**
+	 * Elimina un componente completo
+	 */
+	private removeComponent(component: Component) {
+		component.unmount();
+		if (component.key) {
+			this.components.delete(component.key);
+		}
+	}
+
+	/**
+	 * Crea un nuevo componente
+	 */
+	private createNewComponent(key: any): Component {
+		const factory = () => {
+			const item = computed(() => this.itemsSignal.get().find((v, index) => this.keyFn(v, index) === key));
+			const index = computed(() => this.itemsSignal.get().findIndex((v, index) => this.keyFn(v, index) === key));
+			return this.itemFactoryFn ? this.itemFactoryFn(item, index, this.itemsSignal) : null;
+		};
+
+		const component = new Component(factory, key);
+		this.components.set(key, component);
+
+		return component;
+	}
+
+	private getTargetAnchor(items: T[], index: number): Node | null {
+		const nextItem = index + 1 < items.length ? items[index + 1] : null;
+		const nextComp = nextItem ? this.components.get(this.keyFn(nextItem, index + 1)) : null;
+		if (nextComp && nextComp.nodes) {
+			return nextComp.nodes[0];
+		} else {
+			// Es el último componente, debería insertarse antes del anchor original
+			return this.anchor;
+		}
+	}
+
+	/**
+	 * Función principal que sincroniza los componentes DOM con un array de keys
+	 */
+	private synchronizeComponents(): void {
+		const existingComponents = this.getAllComponents();
+
+		// Identificar qué componentes eliminar (los que no están en keys)
+		const items = this.itemsSignal.get();
+		const keys = items.map((item, index) => this.keyFn(item, index));
+		const componentsToRemove = existingComponents.filter((component) => component.key && !keys.includes(component.key));
+		componentsToRemove.forEach((component) => this.removeComponent(component));
+
+		this.currentKeys = this.currentKeys.filter((key) => keys.includes(key));
+		//console.log('Current keys:', this.currentKeys, 'Target keys:', keys);
+
+		// Procesar cada key en el orden deseado
+		const container = this.container;
+
+		items.forEach((item, index) => {
+			const targetKey = this.keyFn(item, index);
+			const currentKey = this.currentKeys[index];
+			if (targetKey === currentKey) {
+				// La key no ha cambiado de posición, no hacer nada
+				return;
+			}
+			const existingComponent = this.components.get(targetKey);
+
+			if (existingComponent) {
+				const prevComp = this.components.get(currentKey);
+				existingComponent.reanchor(prevComp.nodes[0]);
+				// Reordenar el array de keys actuales
+				this.currentKeys = this.currentKeys.filter((k) => k !== targetKey);
+				this.currentKeys.splice(index, 0, targetKey);
+			} else {
+				// El componente no existe, crearlo
+				const targetAnchor = this.getTargetAnchor(items, index);
+				const newComponent = this.createNewComponent(targetKey);
+				newComponent.mount(container, targetAnchor);
+				this.currentKeys.splice(index, 0, targetKey);
+			}
+		});
+	}
+
+	mount(container: Node, anchor: Node) {
+		//console.log('Mounting ComponentList');
+		this.container = container;
+		this.anchor = anchor;
+
+		globalContext.pushComponentStack(this);
+		globalContext.addReactivity(() => {
+			this.synchronizeComponents();
+		});
+		globalContext.popComponentStack();
+	}
+
+	unmount() {
+		//console.log('Unmounting ComponentList');
+		this.clear();
+		this.container = null!;
+		this.anchor = null!;
+		this.disposables.forEach((d) => {
+			d.dispose();
+		});
+	}
+}
+
+export function componentList<T>(itemFactoryFn: ItemFactoryFn<T>, keyFn: KeyFn<T>) {
+	// TODO?: add props
+	return (listSignal: WritableSignal<T[]>) => {
+		const list = new ComponentList(itemFactoryFn, keyFn, listSignal);
+		return list;
+	};
+}

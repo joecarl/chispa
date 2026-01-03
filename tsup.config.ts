@@ -1,0 +1,30 @@
+import { defineConfig } from 'tsup';
+
+export default defineConfig({
+	entry: ['src/index.ts', 'src/html-compiler/vite-plugin.ts', 'src/html-compiler/cli.ts'],
+	format: ['esm'],
+	dts: true,
+	clean: true,
+	splitting: false,
+	sourcemap: true,
+	outDir: 'dist',
+	external: [
+		'jsdom',
+		'fs',
+		'path',
+		'url',
+		'util',
+		'events',
+		'vm',
+		'os',
+		'http',
+		'https',
+		'stream',
+		'zlib',
+		'crypto',
+		'net',
+		'tls',
+		'assert',
+		'child_process',
+	],
+});
