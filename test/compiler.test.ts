@@ -4,8 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 describe('HTML Compiler', () => {
-	it('should compile my-component.html', () => {
-		const htmlPath = path.join(__dirname, 'example/src/my-component/my-component.html');
+	it('should compile my-app-component.html', () => {
+		const htmlPath = path.join(__dirname, 'example/src/my-app-component/my-app-component.html');
 		const htmlContent = fs.readFileSync(htmlPath, 'utf-8');
 
 		const compiler = new HtmlCompiler(htmlContent);

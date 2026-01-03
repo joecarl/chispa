@@ -1,5 +1,4 @@
-import { component, globalContext, signal } from 'chispa';
-import { bindControlledInput } from './controlled-input';
+import { component, signal, bindControlledInput } from 'chispa';
 import tpl from './demo-form-component.html';
 
 export const DemoForm = component((item) => {
@@ -11,7 +10,7 @@ export const DemoForm = component((item) => {
 				bindControlledInput(el, value, {
 					transform: (val) => {
 						// Poner la primera letra de cada palabra en mayúscula
-						return val.replace(/\b\w/g, (l) => l.toUpperCase());
+						return val.replace(/\b\w/g, (l) => l.toUpperCase()).replace(/\d/g, '');
 					},
 					validate: (val) => {
 						// Límite de longitud
