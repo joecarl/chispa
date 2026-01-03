@@ -8,7 +8,7 @@
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [
-		"/dist"
+		"dist"
 	],
 	"exports": {
 		".": {
@@ -21,7 +21,7 @@
 		}
 	},
 	"bin": {
-		"chispa-cli": "./dist/html-compiler/cli.js"
+		"chispa-cli": "dist/html-compiler/cli.js"
 	},
 	"repository": {
 		"type": "git",
@@ -41,6 +41,7 @@
 	"scripts": {
 		"build": "tsup",
 		"start": "echo \"Error: no dev mode available\" && exit 1",
-		"test": "vitest"
+		"test": "vitest",
+		"prepublishOnly": "npm run build"
 	}
 }
