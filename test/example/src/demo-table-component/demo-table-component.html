@@ -1,0 +1,48 @@
+<h1> Demo tabla </h1>
+
+<div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
+	<button data-cb="add-btn">Añadir</button>
+	<button data-cb="toggle-btn">Toggle</button>
+</div>
+
+<table>
+	<thead>
+		<tr>
+			<th>ID</th>
+			<th>Name</th>
+			<th>Age</th>
+			<th>City</th>
+			<th>Actions</th>
+		</tr>
+	</thead>
+	<tbody class="list-wr">
+		<tr class="list-row">
+			<td>-</td>
+			<td>Fila fija arriba</td>
+			<td>-</td>
+			<td>-</td>
+			<td></td>
+		</tr>
+		<tr data-cb="list-row" class="list-row">
+			<td data-cb="id">1</td>
+			<td data-cb="name">Pedro</td>
+			<td data-cb="age">34</td>
+			<td data-cb="city">Almen</td>
+			<td class="buttons-cell">
+				<div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
+					<button data-cb="edit-btn">Edit</button>
+					<button data-cb="moveup-btn">Move up</button>
+					<button data-cb="remove-btn">Eliminar</button>
+				</div>
+			</td>
+		</tr>
+		<tr class="list-row">
+
+			<td>-</td>
+			<td>Fila fija abajo</td>
+			<td>-</td>
+			<td>-</td>
+			<td></td>
+		</tr>
+	</tbody>
+</table>

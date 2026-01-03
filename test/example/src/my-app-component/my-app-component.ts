@@ -1,5 +1,6 @@
 import { component, computed, signal } from 'chispa';
-import tpl from './my-component.html';
+import { DemoTable } from '../demo-table-component/demo-table-component';
+import tpl from './my-app-component.html';
 
 interface IDivSimpaticoProps {
 	length: number;
@@ -32,5 +33,6 @@ export const MyApp = component(() => {
 				length.update((v) => v + 1);
 			},
 		},
+		demoTableAnchor: DemoTable(),
 	});
 });
