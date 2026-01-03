@@ -1,4 +1,4 @@
-export type { Signal } from './signals';
+export type { Signal, WritableSignal } from './signals';
 export { isSignal, computed, signal } from './signals';
 export { globalContext } from './context';
 export { component, componentList } from './components';
