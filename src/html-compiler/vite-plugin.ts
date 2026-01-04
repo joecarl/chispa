@@ -1,13 +1,19 @@
 import { HtmlCompiler } from './html-compiler';
 import { generateTypes, findAndCompileHtmlFiles } from './generator';
+import { transformWithEsbuild } from 'vite';
 import * as fs from 'fs';
 
-// Convención de Rollup/Vite: Los módulos virtuales deben prefijarse con '\0'.
-// Esto evita que otros plugins o el sistema de archivos intenten resolverlo como un archivo real.
-// Añadimos .chispa.ts para que sea tratado como un módulo TypeScript.
-const toVirtualId = (id: string) => /*'\0' +*/ id + '.chispa.ts';
+/**
+ * Convierte una ruta real de archivo en el ID de módulo virtual que usa Vite/Rollup.
+ * Añade el prefijo `\0` para marcar el módulo como virtual y el sufijo
+ * `.chispa.ts` para que sea tratado como módulo TypeScript.
+ */
+const toVirtualId = (id: string) => '\0' + id + '.chispa.ts';
 
-// Eliminamos el prefijo '\0' y la extensión virtual para obtener la ruta real del archivo HTML.
+/**
+ * Convierte un ID de módulo virtual de vuelta a la ruta real del archivo.
+ * Elimina el prefijo `\0` (si existe) y el sufijo `.chispa.ts`.
+ */
 const fromVirtualId = (id: string) => id.replace(/^\0/, '').replace('.chispa.ts', '');
 
 export function chispaHtmlPlugin() {
@@ -46,21 +52,26 @@ export function chispaHtmlPlugin() {
 			}
 			return null;
 		},
-		load(id: string) {
+		async load(id: string) {
 			if (id.endsWith('.html.chispa.ts')) {
 				const realId = fromVirtualId(id);
 				try {
 					const content = fs.readFileSync(realId, 'utf-8');
 					if (content.includes('<!DOCTYPE html>') || content.includes('<html')) {
-						return null;
+						return 'export default {};';
 					}
 
 					const compiler = new HtmlCompiler(content);
 					const { js } = compiler.compile();
 					generateTypes(realId, content, rootDir);
-					return js;
+
+					const result = await transformWithEsbuild(js, realId, {
+						loader: 'ts',
+					});
+					return result.code;
 				} catch (e) {
-					return null;
+					console.error(`[chispa] Error loading ${id}:`, e);
+					throw e;
 				}
 			}
 		},

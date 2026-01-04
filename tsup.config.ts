@@ -26,5 +26,6 @@ export default defineConfig({
 		'tls',
 		'assert',
 		'child_process',
+		'vite',
 	],
 });
