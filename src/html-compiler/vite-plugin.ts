@@ -1,6 +1,6 @@
 import { HtmlCompiler } from './html-compiler';
 import { generateTypes, findAndCompileHtmlFiles } from './generator';
-import { transformWithEsbuild } from 'vite';
+import { type Plugin, transformWithEsbuild } from 'vite';
 import * as fs from 'fs';
 
 /**
@@ -16,19 +16,19 @@ const toVirtualId = (id: string) => '\0' + id + '.chispa.ts';
  */
 const fromVirtualId = (id: string) => id.replace(/^\0/, '').replace('.chispa.ts', '');
 
-export function chispaHtmlPlugin() {
+export function chispaHtmlPlugin(): Plugin {
 	let rootDir = process.cwd();
 
 	return {
 		name: 'chispa-html',
-		enforce: 'pre' as 'pre',
-		configResolved(config: any) {
+		enforce: 'pre',
+		configResolved(config) {
 			rootDir = config.root;
 		},
 		buildStart() {
 			findAndCompileHtmlFiles(rootDir, rootDir);
 		},
-		async handleHotUpdate(ctx: { file: string; server: any; read: () => string | Promise<string>; modules: any[] }) {
+		async handleHotUpdate(ctx) {
 			if (ctx.file.endsWith('.html')) {
 				const content = await ctx.read();
 				generateTypes(ctx.file, content, rootDir);
@@ -40,7 +40,7 @@ export function chispaHtmlPlugin() {
 				}
 			}
 		},
-		async resolveId(source: string, importer: string, options: any) {
+		async resolveId(source, importer, options) {
 			if (source.endsWith('.html.chispa.ts')) {
 				return source;
 			}
@@ -52,7 +52,7 @@ export function chispaHtmlPlugin() {
 			}
 			return null;
 		},
-		async load(id: string) {
+		async load(id) {
 			if (id.endsWith('.html.chispa.ts')) {
 				const realId = fromVirtualId(id);
 				try {

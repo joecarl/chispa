@@ -2,5 +2,5 @@ import { defineConfig } from 'vite';
 import { chispaHtmlPlugin } from 'chispa/vite-plugin';
 
 export default defineConfig({
-	plugins: [chispaHtmlPlugin()],
+	plugins: [chispaHtmlPlugin() as any],
 });
