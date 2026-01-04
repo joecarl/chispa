@@ -80,7 +80,23 @@ El compilador generará un objeto `tpl` donde cada `data-cb` se convierte en una
 
 -   `data-cb="my-text"` -> `tpl.myText(...)`
 -   `data-cb="my-button"` -> `tpl.myButton(...)`
--   Si el HTML tiene múltiples elementos raíz o quieres agruparlos, usa `tpl.fragment(...)`.
+
+### El constructor `tpl.fragment`
+
+Cada archivo HTML compilado incluye un constructor especial llamado `fragment`. Este constructor representa **todo el contenido** del archivo HTML.
+
+Es la forma estándar y recomendada de crear el punto de entrada de un componente. Al usar `fragment`, te aseguras de renderizar el contenido completo del archivo HTML.
+
+```typescript
+export const MyComponent = component(() => {
+	return tpl.fragment({
+		myText: { inner: 'Hola' },
+		myButton: { onclick: () => console.log('Click!') },
+	});
+});
+```
+
+A menos que necesites renderizar solo una parte específica de la plantilla porque estás creando un subcomponente o por cualquier otro motivo técnico, siempre deberías retornar `tpl.fragment(...)`.
 
 ## Guía de Uso
 
