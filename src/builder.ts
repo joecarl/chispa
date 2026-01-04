@@ -2,28 +2,28 @@ import { Component, ComponentList } from './components';
 import { globalContext } from './context';
 import { isSignal, Signal } from './signals';
 
-export type TClasses = Record<string, boolean>;
-export type TNode = string | number | Node | null;
-export type TContent = TNode | TNode[] | Component | ComponentList | Signal<TNode | TNode[] | Component | ComponentList>;
-export type TCSSPropertiesStrings = {
+export type ChispaClasses = Record<string, boolean>;
+export type ChispaNode = string | number | Node | null;
+export type ChispaContent = ChispaNode | ChispaNode[] | Component | ComponentList; // | Signal<ChispaNode | ChispaNode[] | Component | ComponentList>;
+export type ChispaCSSPropertiesStrings = {
 	[K in keyof CSSStyleDeclaration]?: string | Signal<string>;
 };
 
 type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
 
-type TItemBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
-interface IItemBuilderAdditionalProps<T, TItems> {
+type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
+interface IItemBuilderAdditionalProps<T, TNodes> {
 	addClass?: string;
-	classes?: TClasses;
-	nodes?: TItems;
-	inner?: TContent;
-	style?: TCSSPropertiesStrings;
+	classes?: ChispaClasses;
+	nodes?: TNodes;
+	inner?: ChispaContent | Signal<ChispaContent>;
+	style?: ChispaCSSPropertiesStrings;
 	dataset?: Record<string, string>;
 	_ref?: (node: T) => void | { current: T | null };
 }
-export type TItemBuilderProps<T, TItems> = TItemBuilderBaseProps<T> & IItemBuilderAdditionalProps<T, TItems>;
+export type ChispaItemBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & IItemBuilderAdditionalProps<T, TNodes>;
 
-function makeclass(classes: TClasses) {
+function makeclass(classes: ChispaClasses) {
 	let finalClasses = [];
 
 	for (const className in classes) {
@@ -35,7 +35,7 @@ function makeclass(classes: TClasses) {
 	return finalClasses.join(' ').trim();
 }
 
-export function buildClass(literalValue: string, additionalValue?: string, classes?: TClasses) {
+export function buildClass(literalValue: string, additionalValue?: string, classes?: ChispaClasses) {
 	const parts = [];
 	if (literalValue) parts.push(literalValue);
 	if (additionalValue) parts.push(additionalValue);
@@ -132,7 +132,7 @@ export function setProps<T extends Element>(node: T, props: any) {
 	}
 }
 
-export function appendChild(node: Element | DocumentFragment, child: TContent) {
+export function appendChild(node: Element | DocumentFragment, child: ChispaContent | Signal<ChispaContent>) {
 	if (child === null) return;
 	if (isSignal(child)) {
 		processSignalChild(node, child);
@@ -151,7 +151,7 @@ export function appendChild(node: Element | DocumentFragment, child: TContent) {
 	node.appendChild(child instanceof Node ? child : document.createTextNode(child.toString()));
 }
 
-function processSignalChild(node: Element | DocumentFragment, child: Signal<TNode | Component<any> | ComponentList<any> | TNode[]>) {
+function processSignalChild(node: Element | DocumentFragment, child: Signal<ChispaNode | Component<any> | ComponentList<any> | ChispaNode[]>) {
 	const anchor = document.createTextNode('');
 	node.appendChild(anchor);
 	let prevValue: Component | ComponentList = null;
@@ -181,7 +181,7 @@ function processSignalChild(node: Element | DocumentFragment, child: Signal<TNod
 	});
 }
 
-function toNode(n: TNode | TNode[]): Node {
+function toNode(n: ChispaNode | ChispaNode[]): Node {
 	if (Array.isArray(n)) {
 		const frag = document.createDocumentFragment();
 		frag.append(...n.map((c) => toNode(c)));

@@ -1,4 +1,4 @@
-import { component, computed, signal, componentList } from 'chispa';
+import { component, computed, signal, componentList, Signal } from 'chispa';
 import tpl from './demo-table-component.html';
 
 interface IDemoItem {
@@ -8,14 +8,14 @@ interface IDemoItem {
 	ciudad: string;
 }
 
-const MyList = componentList<IDemoItem>(
-	(item, index, list) => {
+const MyList = componentList<IDemoItem, { citySuffix: Signal<string> }>(
+	(item, index, list, props) => {
 		return tpl.listRow({
 			nodes: {
 				id: { inner: item.computed.id },
 				name: { inner: item.computed.nombre },
 				age: { inner: item.computed.edad },
-				city: { inner: item.computed.ciudad },
+				city: { inner: computed(() => item.get().ciudad + props.citySuffix.get()) },
 				editBtn: {
 					onclick: () => {
 						list.update((v) => {
@@ -52,6 +52,7 @@ const MyList = componentList<IDemoItem>(
 
 export const DemoTable = component((props) => {
 	const showTable = signal(true);
+	const citySuffix = signal(' 🌆');
 
 	const list = signal<IDemoItem[]>([
 		{ id: 1, nombre: 'Juan 🐟', edad: 25, ciudad: 'Madrid' },
@@ -70,7 +71,7 @@ export const DemoTable = component((props) => {
 	});
 
 	return tpl.fragment({
-		listRow: computed(() => (showTable.get() ? MyList(list) : hiddenRowsIndicator)),
+		listRow: computed(() => (showTable.get() ? MyList(list, { citySuffix }) : hiddenRowsIndicator)),
 		addBtn: {
 			onclick: () => {
 				if (showTable.get() === false) {
@@ -78,6 +79,7 @@ export const DemoTable = component((props) => {
 					return;
 				}
 				list.update((v) => [...v, { id: idCounter++, nombre: 'Nuevo', edad: 0, ciudad: 'Ciudad' }]);
+				citySuffix.set(' 🌃');
 			},
 		},
 		toggleBtn: {

@@ -1,7 +1,7 @@
 import { Component, ComponentList } from './components';
 import { Signal } from './signals';
 
-type TExecutionProcess = 'createComponent' | 'computed' | 'addReactivity';
+type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity';
 
 export interface IDisposable {
 	dispose: () => void;
@@ -16,7 +16,7 @@ class AppContext {
 
 	private dirtyReactivities = new Set<Reactivity>();
 
-	private executionStack: TExecutionProcess[] = [];
+	private executionStack: ExecutionKind[] = [];
 
 	private componentStack: (Component | ComponentList)[] = [];
 
@@ -85,7 +85,7 @@ class AppContext {
 		return current !== 'createComponent';
 	}
 
-	pushExecutionStack(type: TExecutionProcess) {
+	pushExecutionStack(type: ExecutionKind) {
 		this.executionStack.push(type);
 	}
 

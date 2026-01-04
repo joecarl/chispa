@@ -1,12 +1,12 @@
 import { globalContext, IDisposable } from './context';
 import { computed, Signal, WritableSignal } from './signals';
 
-export type TProps = Record<string, Signal<any>>;
-export type TDict = Record<string, any>;
+export type Dict = Record<string, any>;
 export type WithSignals<T> = { [K in keyof T]: Signal<T[K]> };
-export type TComponentFactory<T extends TDict> = ((props: WithSignals<T>) => Node) | (() => Node);
+//export type TComponentFactory<T extends TDict> = ((props: WithSignals<T>) => Node) | (() => Node);
+export type ComponentFactory<TProps extends Dict> = (props: TProps) => Node;
 
-export class Component<T = any> {
+export class Component<TProps = any> {
 	public onUnmount: (() => void) | null = null;
 
 	public nodes: Node[] | null = null;
@@ -19,7 +19,8 @@ export class Component<T = any> {
 
 	public silent = true;
 
-	constructor(private readonly factoryFn: TComponentFactory<T>, public readonly key: any = null, public readonly props: WithSignals<T> = null) {}
+	//constructor(private readonly factoryFn: TComponentFactory<T>, public readonly key: any = null, public readonly props: WithSignals<T> = null) {}
+	constructor(private readonly factoryFn: ComponentFactory<TProps>, public readonly key: any = null, public readonly props: TProps = null) {}
 
 	mount(container: Node, anchor: Node) {
 		if (!this.silent) console.log('Mounting Component', this);
@@ -86,23 +87,33 @@ export class Component<T = any> {
 	}
 }
 
-export function component<T extends Record<string, any>>(factory: TComponentFactory<T>) {
-	return (props?: WithSignals<T>) => {
+// Definimos overloads para component
+export function component(factory: ComponentFactory<any>): (props?: any) => Component;
+export function component<TProps extends Dict>(factory: ComponentFactory<TProps>): (props: TProps) => Component<TProps>;
+
+export function component<TProps extends Dict = any>(factory: ComponentFactory<TProps>) {
+	//return (props?: WithSignals<T>) => {
+	return (props?: TProps) => {
 		return new Component(factory, null, props);
 	};
 }
 
-type ItemFactoryFn<T> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>) => Node;
+type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props: TProps) => Node;
 type KeyFn<T> = (item: T, index: number) => any;
 
-export class ComponentList<T = any> {
-	private readonly components: Map<string, Component>;
+export class ComponentList<TItem = any, TProps = any> {
+	private readonly components: Map<string, Component<TProps>>;
 	private container: Node;
 	private anchor: Node; // Nodes must be inserted before this node
 	private currentKeys: any[] = [];
 	public disposables: any[] = [];
 
-	constructor(private readonly itemFactoryFn: ItemFactoryFn<T>, private readonly keyFn: KeyFn<T>, private readonly itemsSignal: WritableSignal<T[]>) {
+	constructor(
+		private readonly itemFactoryFn: ItemFactoryFn<TItem, TProps>,
+		private readonly keyFn: KeyFn<TItem>,
+		private readonly itemsSignal: WritableSignal<TItem[]>,
+		private readonly props: TProps = null
+	) {
 		this.components = new Map();
 	}
 
@@ -136,19 +147,19 @@ export class ComponentList<T = any> {
 	 * Crea un nuevo componente
 	 */
 	private createNewComponent(key: any): Component {
-		const factory = () => {
+		const factory = (props?: TProps) => {
 			const item = computed(() => this.itemsSignal.get().find((v, index) => this.keyFn(v, index) === key));
 			const index = computed(() => this.itemsSignal.get().findIndex((v, index) => this.keyFn(v, index) === key));
-			return this.itemFactoryFn ? this.itemFactoryFn(item, index, this.itemsSignal) : null;
+			return this.itemFactoryFn ? this.itemFactoryFn(item, index, this.itemsSignal, props) : null;
 		};
 
-		const component = new Component(factory, key);
+		const component = new Component(factory, key, this.props);
 		this.components.set(key, component);
 
 		return component;
 	}
 
-	private getTargetAnchor(items: T[], index: number): Node | null {
+	private getTargetAnchor(items: TItem[], index: number): Node | null {
 		const nextItem = index + 1 < items.length ? items[index + 1] : null;
 		const nextComp = nextItem ? this.components.get(this.keyFn(nextItem, index + 1)) : null;
 		if (nextComp && nextComp.nodes) {
@@ -225,10 +236,19 @@ export class ComponentList<T = any> {
 	}
 }
 
-export function componentList<T>(itemFactoryFn: ItemFactoryFn<T>, keyFn: KeyFn<T>) {
-	// TODO?: add props
-	return (listSignal: WritableSignal<T[]>) => {
-		const list = new ComponentList(itemFactoryFn, keyFn, listSignal);
+// Definimos overloads para componentList
+export function componentList<TItem>(
+	itemFactoryFn: ItemFactoryFn<TItem, any>,
+	keyFn: KeyFn<TItem>
+): (listSignal: WritableSignal<TItem[]>, props?: any) => ComponentList<TItem>;
+export function componentList<TItem, TProps extends Dict>(
+	itemFactoryFn: ItemFactoryFn<TItem, TProps>,
+	keyFn: KeyFn<TItem>
+): (listSignal: WritableSignal<TItem[]>, props: TProps) => ComponentList<TItem, TProps>;
+
+export function componentList<TItem, TProps extends Dict = any>(itemFactoryFn: ItemFactoryFn<TItem, TProps>, keyFn: KeyFn<TItem>) {
+	return (listSignal: WritableSignal<TItem[]>, props?: TProps) => {
+		const list = new ComponentList(itemFactoryFn, keyFn, listSignal, props);
 		return list;
 	};
 }
