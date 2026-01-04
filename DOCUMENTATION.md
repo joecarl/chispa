@@ -170,6 +170,43 @@ tpl.card({
 });
 ```
 
+### Referencia al Nodo Real (`_ref`)
+
+Si necesitas acceder directamente al elemento del DOM (por ejemplo, para usar una librería externa o enfocar un input), puedes usar la propiedad `_ref`. Esta función se ejecuta en cuanto el nodo es creado.
+
+```typescript
+tpl.myInput({
+	_ref: (el) => {
+		console.log('Nodo creado:', el);
+		el.focus();
+	},
+});
+```
+
+### Inputs Controlados
+
+Chispa proporciona una utilidad llamada `bindControlledInput` para manejar inputs de forma controlada, permitiendo transformaciones y validaciones en tiempo real.
+
+```typescript
+import { component, signal, bindControlledInput } from 'chispa';
+import tpl from './my-form.html';
+
+export const MyForm = component(() => {
+	const name = signal('');
+
+	return tpl.nameInput({
+		_ref: (el) => {
+			bindControlledInput(el, name, {
+				// Transforma el valor antes de guardarlo (ej: forzar mayúsculas)
+				transform: (val) => val.toUpperCase(),
+				// Valida el valor. Si devuelve false, se revierte el cambio.
+				validate: (val) => val.length <= 10,
+			});
+		},
+	});
+});
+```
+
 ## API Reference
 
 ### `component<TProps>(factoryFn)`
@@ -194,3 +231,7 @@ import { App } from './app';
 
 appendChild(document.body, App());
 ```
+
+### `bindControlledInput(element, signal, options?)`
+
+Vincula un input o textarea a una señal de forma controlada. Permite definir funciones de `transform` y `validate`.
