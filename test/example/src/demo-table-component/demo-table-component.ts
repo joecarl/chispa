@@ -11,7 +11,7 @@ interface IDemoItem {
 const MyList = componentList<IDemoItem>(
 	(item, index, list) => {
 		return tpl.listRow({
-			items: {
+			nodes: {
 				id: { inner: item.computed.id },
 				name: { inner: item.computed.nombre },
 				age: { inner: item.computed.edad },
@@ -61,7 +61,7 @@ export const DemoTable = component((props) => {
 	let idCounter = 4;
 
 	const hiddenRowsIndicator = tpl.listRow({
-		items: {
+		nodes: {
 			id: { inner: '-' },
 			name: { inner: '*** Filas desmontadas ***', style: { fontStyle: 'italic', color: 'rgb(143 106 48)' } },
 			age: { inner: '-' },

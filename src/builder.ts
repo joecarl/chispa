@@ -15,7 +15,7 @@ type TItemBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset
 interface IItemBuilderAdditionalProps<T, TItems> {
 	addClass?: string;
 	classes?: TClasses;
-	items?: TItems;
+	nodes?: TItems;
 	inner?: TContent;
 	style?: TCSSPropertiesStrings;
 	dataset?: Record<string, string>;
@@ -43,7 +43,7 @@ export function buildClass(literalValue: string, additionalValue?: string, class
 	return parts.join(' ').trim();
 }
 
-const forbiddenProps = ['addClass', 'classes', 'items', 'inner', '_ref'];
+const forbiddenProps = ['addClass', 'classes', 'nodes', 'inner', '_ref'];
 
 export function getValidProps(props: any) {
 	const finalProps: any = {};

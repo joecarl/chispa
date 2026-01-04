@@ -137,7 +137,7 @@ export class HtmlCompiler {
 				if (currComp === 'fragment') {
 					htmlNodeCode += `getItem(Components, props, '${cbid}')`;
 				} else {
-					htmlNodeCode += `getItem(Components, props.items, '${cbid}')`;
+					htmlNodeCode += `getItem(Components, props.nodes, '${cbid}')`;
 				}
 			} else {
 				const attrs = this.getHtmlNodeAttrs(element, isComponent);
