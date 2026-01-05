@@ -186,6 +186,56 @@ tpl.card({
 });
 ```
 
+## Estructura de Componentes y `data-cb`
+
+Es crucial mantener la correspondencia jerárquica entre los elementos HTML definidos con `data-cb` y la estructura del objeto pasado a `tpl.fragment` (o funciones similares).
+
+### Regla de Anidamiento
+
+Si un elemento HTML con `data-cb` es hijo de otro elemento con `data-cb`, esta relación debe reflejarse en el código TypeScript utilizando la propiedad `nodes`.
+
+**Ejemplo HTML:**
+
+```html
+<div data-cb="modal">
+	<form data-cb="formulario">
+		<button data-cb="botonCancelar">Cancelar</button>
+	</form>
+</div>
+```
+
+**Código TypeScript Incorrecto (Plano):**
+
+```typescript
+// ESTO ES INCORRECTO si los elementos están anidados en el HTML
+return tpl.fragment({
+    modal: { ... },
+    formulario: { ... },
+    botonCancelar: { ... }
+});
+```
+
+**Código TypeScript Correcto (Anidado):**
+
+```typescript
+return tpl.fragment({
+    modal: {
+        // Propiedades del modal (style, etc.)
+        nodes: {
+            formulario: {
+                // Propiedades del formulario (onsubmit, etc.)
+                nodes: {
+                    botonCancelar: {
+                        // Propiedades del botón (onclick, etc.)
+                        onclick: () => { ... }
+                    }
+                }
+            }
+        }
+    }
+});
+```
+
 ### Referencia al Nodo Real (`_ref`)
 
 Si necesitas acceder directamente al elemento del DOM (por ejemplo, para usar una librería externa o enfocar un input), puedes usar la propiedad `_ref`. Esta función se ejecuta en cuanto el nodo es creado.
