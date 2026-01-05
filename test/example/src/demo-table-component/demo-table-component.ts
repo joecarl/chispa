@@ -15,7 +15,7 @@ const MyList = componentList<IDemoItem, { citySuffix: Signal<string> }>(
 				id: { inner: item.computed.id },
 				name: { inner: item.computed.nombre },
 				age: { inner: item.computed.edad },
-				city: { inner: computed(() => item.get().ciudad + props.citySuffix.get()) },
+				city: { inner: () => item.get().ciudad + props.citySuffix.get() },
 				editBtn: {
 					onclick: () => {
 						list.update((v) => {

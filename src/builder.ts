@@ -1,27 +1,27 @@
 import { Component, ComponentList } from './components';
 import { globalContext } from './context';
-import { isSignal, Signal } from './signals';
+import { computed, isSignal, type Signal } from './signals';
 
 export type ChispaClasses = Record<string, boolean>;
 export type ChispaNode = string | number | Node | null;
 export type ChispaContent = ChispaNode | ChispaNode[] | Component | ComponentList; // | Signal<ChispaNode | ChispaNode[] | Component | ComponentList>;
 export type ChispaCSSPropertiesStrings = {
-	[K in keyof CSSStyleDeclaration]?: string | Signal<string>;
+	[K in keyof CSSStyleDeclaration]?: string | Signal<string> | (() => string);
 };
 
 type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
 
 type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
-interface IItemBuilderAdditionalProps<T, TNodes> {
+interface INodeBuilderAdditionalProps<T, TNodes> {
 	addClass?: string;
 	classes?: ChispaClasses;
 	nodes?: TNodes;
-	inner?: ChispaContent | Signal<ChispaContent>;
+	inner?: ChispaContent | Signal<ChispaContent> | (() => ChispaContent);
 	style?: ChispaCSSPropertiesStrings;
 	dataset?: Record<string, string>;
 	_ref?: (node: T) => void | { current: T | null };
 }
-export type ChispaItemBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & IItemBuilderAdditionalProps<T, TNodes>;
+export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes>;
 
 function makeclass(classes: ChispaClasses) {
 	let finalClasses = [];
@@ -92,7 +92,11 @@ export function setProps<T extends Element>(node: T, props: any) {
 		if (props.style !== undefined) {
 			const style = props.style;
 			for (const styleKey in style) {
-				if (isSignal(style[styleKey])) {
+				if (typeof style[styleKey] === 'function') {
+					globalContext.addReactivity(() => {
+						node.style[styleKey as any] = style[styleKey]();
+					});
+				} else if (isSignal(style[styleKey])) {
 					globalContext.addReactivity(() => {
 						node.style[styleKey as any] = style[styleKey].get();
 					});
@@ -134,6 +138,10 @@ export function setProps<T extends Element>(node: T, props: any) {
 
 export function appendChild(node: Element | DocumentFragment, child: ChispaContent | Signal<ChispaContent>) {
 	if (child === null) return;
+	if (typeof child === 'function') {
+		processSignalChild(node, computed(child));
+		return;
+	}
 	if (isSignal(child)) {
 		processSignalChild(node, child);
 		return;

@@ -1,10 +1,10 @@
-import { component, computed, signal } from 'chispa';
+import { component, computed, type Signal, signal } from 'chispa';
 import { DemoTable } from '../demo-table-component/demo-table-component';
 import { DemoForm } from '../demo-form-component/demo-form-component';
 import tpl from './my-app-component.html';
 
 interface IDivSimpaticoProps {
-	length: number;
+	length: Signal<number>;
 }
 const DivSimpatico = component<IDivSimpaticoProps>((props) => {
 	const text = computed(() => {
@@ -23,11 +23,20 @@ const DivSimpatico = component<IDivSimpaticoProps>((props) => {
 	});
 });
 
+function makeColor(length: number) {
+	if (length < 2) return '#ccc';
+	if (length < 5) return '#8f8';
+	if (length < 9) return '#88f';
+	if (length < 15) return '#fa8';
+	if (length < 20) return '#f88';
+	return '#f44';
+}
+
 export const MyApp = component(() => {
 	const length = signal(1);
 
 	return tpl.fragment({
-		elspan: { inner: length },
+		elspan: { inner: length, style: { backgroundColor: () => makeColor(length.get()) } },
 		eldiv: DivSimpatico({ length }),
 		incBtn: {
 			onclick: () => {

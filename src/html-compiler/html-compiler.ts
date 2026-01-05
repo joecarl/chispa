@@ -212,7 +212,7 @@ export class HtmlCompiler {
 	}
 
 	private static getPropsTypename(cbid: string): string {
-		return 'T' + cbid.charAt(0).toUpperCase() + cbid.slice(1) + 'Props';
+		return 'Chispa' + cbid.charAt(0).toUpperCase() + cbid.slice(1) + 'Props';
 	}
 
 	private wrapFnComponent(cbid: string, jsx: string): string {
@@ -244,7 +244,7 @@ export class HtmlCompiler {
 		let itemsType = '{\n';
 		items.forEach((itemCbid) => {
 			const itemTypename = HtmlCompiler.getPropsTypename(itemCbid);
-			itemsType += `${itemCbid}?: ${itemTypename} | TContent;\n`;
+			itemsType += `${itemCbid}?: ${itemTypename} | ChispaContent;\n`;
 		});
 		itemsType += '}\n';
 
@@ -255,9 +255,9 @@ export class HtmlCompiler {
 		} else {
 			const tagname = this.componentsTags[cbid];
 			if (this.isSvg[cbid]) {
-				return `type ${typename} = TItemBuilderProps<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
+				return `type ${typename} = ChispaNodeBuilderProps<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
 			} else {
-				return `type ${typename} = TItemBuilderProps<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
+				return `type ${typename} = ChispaNodeBuilderProps<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
 			}
 		}
 	}
@@ -274,8 +274,9 @@ export class HtmlCompiler {
 		}
 
 		const jsOutput = `
-            import { appendChild, getItem, getValidProps, buildClass, setAttributes, setProps, TContent, TItemBuilderProps } from 'chispa';
-
+            import { appendChild, getItem, getValidProps, buildClass, setAttributes, setProps } from 'chispa';
+            import type { ChispaContent, ChispaNodeBuilderProps } from 'chispa';
+			
             const SVG_NS = 'http://www.w3.org/2000/svg';
             
             const Components = {
@@ -286,7 +287,7 @@ export class HtmlCompiler {
         `;
 
 		const dtsOutput = `
-            import { TContent, TItemBuilderProps } from 'chispa';
+            import type { ChispaContent, ChispaNodeBuilderProps } from 'chispa';
             
             ${typedefs}
             
