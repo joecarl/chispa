@@ -1,6 +1,6 @@
 {
 	"name": "chispa",
-	"version": "0.2.8",
+	"version": "0.2.9",
 	"description": "A fully declarative UI reactive framework for building web applications.",
 	"author": "José Carlos HR <joecarlhr@gmail.com>",
 	"license": "MIT",
@@ -28,7 +28,8 @@
 		"url": "git+https://github.com/joecarl/chispa.git"
 	},
 	"dependencies": {
-		"jsdom": "^27.4.0"
+		"jsdom": "^27.4.0",
+		"prettier": "^3.7.4"
 	},
 	"devDependencies": {
 		"@types/jsdom": "^27.0.0",

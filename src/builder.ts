@@ -4,7 +4,7 @@ import { computed, isSignal, type Signal } from './signals';
 
 export type ChispaReactive<T> = T | Signal<T> | (() => T);
 export type ChispaNode = string | number | Node | null;
-export type ChispaContent = ChispaNode | ChispaNode[] | Component | ComponentList; // | Signal<ChispaNode | ChispaNode[] | Component | ComponentList>;
+export type ChispaContent = ChispaNode | ChispaNode[] | Component | ComponentList;
 export type ChispaContentReactive = ChispaReactive<ChispaContent>;
 export type ChispaClasses = Record<string, ChispaReactive<boolean>>;
 export type ChispaCSSPropertiesStrings = {
@@ -43,7 +43,7 @@ export function getValidProps(props: any) {
 	return finalProps;
 }
 
-export function getItem<T>(Components: T, items: any, itemName: keyof T) {
+export function getItem<T>(template: T, items: any, itemName: keyof T) {
 	if (!items || !items[itemName]) {
 		return null;
 	}
@@ -51,7 +51,7 @@ export function getItem<T>(Components: T, items: any, itemName: keyof T) {
 	const item = items[itemName];
 
 	if (item.constructor && item.constructor.name === 'Object' && !(item instanceof Element)) {
-		const Comp = Components[itemName] as (props: any) => Element;
+		const Comp = template[itemName] as (props: any) => Element;
 		const itemProps = item;
 
 		return Comp(itemProps);

@@ -1,5 +1,6 @@
-import { WithSignals } from './components';
 import { globalContext, Reactivity } from './context';
+
+type WithSignals<T> = { [K in keyof T]: Signal<T[K]> };
 
 abstract class Signal<T> {
 	protected abstract value: T;

@@ -2,11 +2,9 @@ import { globalContext, IDisposable } from './context';
 import { computed, Signal, WritableSignal } from './signals';
 
 export type Dict = Record<string, any>;
-export type WithSignals<T> = { [K in keyof T]: Signal<T[K]> };
-//export type TComponentFactory<T extends TDict> = ((props: WithSignals<T>) => Node) | (() => Node);
 export type ComponentFactory<TProps extends Dict> = (props: TProps) => Node;
 
-export class Component<TProps = any> {
+export class Component<TProps extends Dict = any> {
 	public onUnmount: (() => void) | null = null;
 
 	public nodes: Node[] | null = null;
@@ -19,8 +17,11 @@ export class Component<TProps = any> {
 
 	public silent = true;
 
-	//constructor(private readonly factoryFn: TComponentFactory<T>, public readonly key: any = null, public readonly props: WithSignals<T> = null) {}
-	constructor(private readonly factoryFn: ComponentFactory<TProps>, public readonly key: any = null, public readonly props: TProps = null) {}
+	constructor(
+		private readonly factoryFn: ComponentFactory<TProps>,
+		public readonly key: any = null,
+		public readonly props: TProps = null
+	) {}
 
 	mount(container: Node, anchor: Node) {
 		if (!this.silent) console.log('Mounting Component', this);
@@ -92,7 +93,6 @@ export function component(factory: ComponentFactory<any>): (props?: any) => Comp
 export function component<TProps extends Dict>(factory: ComponentFactory<TProps>): (props: TProps) => Component<TProps>;
 
 export function component<TProps extends Dict = any>(factory: ComponentFactory<TProps>) {
-	//return (props?: WithSignals<T>) => {
 	return (props?: TProps) => {
 		return new Component(factory, null, props);
 	};
@@ -101,7 +101,7 @@ export function component<TProps extends Dict = any>(factory: ComponentFactory<T
 type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props: TProps) => Node;
 type KeyFn<T> = (item: T, index: number) => any;
 
-export class ComponentList<TItem = any, TProps = any> {
+export class ComponentList<TItem = any, TProps extends Dict = any> {
 	private readonly components: Map<string, Component<TProps>>;
 	private container: Node;
 	private anchor: Node; // Nodes must be inserted before this node

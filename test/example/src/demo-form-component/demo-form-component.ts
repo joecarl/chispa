@@ -24,7 +24,7 @@ export const DemoForm = component((item) => {
 		},
 		randomNameBtn: {
 			onclick: () => {
-				const names = ['Ana', 'Luis', 'María', 'Juan', 'Lucía', 'Pedro', 'Sofía', 'Carlos'];
+				const names = ['Ana', 'Luis', 'Juan', 'Andrea', 'Pedro', 'Laura', 'Carlos'];
 				const randomName = names[Math.floor(Math.random() * names.length)];
 				value.set(randomName);
 			},

@@ -1,4 +1,5 @@
 import { JSDOM } from 'jsdom';
+import { format } from 'prettier';
 
 const VOID_ELEMENTS = ['area', 'base', 'br', 'hr', 'img', 'input', 'link', 'meta', 'param', 'keygen', 'source'];
 
@@ -135,9 +136,9 @@ export class HtmlCompiler {
 				this.stack.shift();
 
 				if (currComp === 'fragment') {
-					htmlNodeCode += `getItem(Components, props, '${cbid}')`;
+					htmlNodeCode += `getItem(template, props, '${cbid}')`;
 				} else {
-					htmlNodeCode += `getItem(Components, props.nodes, '${cbid}')`;
+					htmlNodeCode += `getItem(template, props.nodes, '${cbid}')`;
 				}
 			} else {
 				const attrs = this.getHtmlNodeAttrs(element, isComponent);
@@ -262,7 +263,7 @@ export class HtmlCompiler {
 		}
 	}
 
-	public compile(): { js: string; dts: string } {
+	public async compile(): Promise<{ ts: string; dts: string }> {
 		this.createAllComponents();
 
 		let componentsClasses = '';
@@ -279,11 +280,11 @@ export class HtmlCompiler {
 			
             const SVG_NS = 'http://www.w3.org/2000/svg';
             
-            const Components = {
+            const template = {
                 ${componentsClasses}
             };
             
-            export default Components;
+            export default template;
         `;
 
 		const dtsOutput = `
@@ -291,7 +292,7 @@ export class HtmlCompiler {
             
             ${typedefs}
             
-            declare const Components: {
+            declare const template: {
                 ${Object.keys(this.components)
 					.map((cbid) => {
 						const typename = HtmlCompiler.getPropsTypename(cbid);
@@ -300,9 +301,20 @@ export class HtmlCompiler {
 					.join('\n')}
             };
             
-            export default Components;
+            export default template;
         `;
 
-		return { js: jsOutput, dts: dtsOutput };
+		const prettierOptions = {
+			parser: 'typescript',
+			semi: true,
+			singleQuote: true,
+			useTabs: true,
+			printWidth: 120,
+		};
+
+		return {
+			ts: await format(jsOutput, prettierOptions),
+			dts: await format(dtsOutput, prettierOptions),
+		};
 	}
 }

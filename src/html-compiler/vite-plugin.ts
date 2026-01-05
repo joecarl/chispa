@@ -25,13 +25,13 @@ export function chispaHtmlPlugin(): Plugin {
 		configResolved(config) {
 			rootDir = config.root;
 		},
-		buildStart() {
-			findAndCompileHtmlFiles(rootDir, rootDir);
+		async buildStart() {
+			await findAndCompileHtmlFiles(rootDir, rootDir);
 		},
 		async handleHotUpdate(ctx) {
 			if (ctx.file.endsWith('.html')) {
 				const content = await ctx.read();
-				generateTypes(ctx.file, content, rootDir);
+				await generateTypes(ctx.file, content, rootDir);
 
 				// Buscamos el módulo virtual asociado al archivo HTML modificado.
 				const module = ctx.server.moduleGraph.getModuleById(toVirtualId(ctx.file));
@@ -62,10 +62,10 @@ export function chispaHtmlPlugin(): Plugin {
 					}
 
 					const compiler = new HtmlCompiler(content);
-					const { js } = compiler.compile();
+					const { ts } = await compiler.compile();
 					generateTypes(realId, content, rootDir);
 
-					const result = await transformWithEsbuild(js, realId, {
+					const result = await transformWithEsbuild(ts, realId, {
 						loader: 'ts',
 					});
 					return result.code;
