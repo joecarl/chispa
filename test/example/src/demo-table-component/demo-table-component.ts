@@ -71,7 +71,7 @@ export const DemoTable = component((props) => {
 	});
 
 	return tpl.fragment({
-		listRow: computed(() => (showTable.get() ? MyList(list, { citySuffix }) : hiddenRowsIndicator)),
+		listRow: () => (showTable.get() ? MyList(list, { citySuffix }) : hiddenRowsIndicator),
 		addBtn: {
 			onclick: () => {
 				if (showTable.get() === false) {

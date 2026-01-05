@@ -2,11 +2,13 @@ import { Component, ComponentList } from './components';
 import { globalContext } from './context';
 import { computed, isSignal, type Signal } from './signals';
 
-export type ChispaClasses = Record<string, boolean | Signal<boolean> | (() => boolean)>;
+export type ChispaReactive<T> = T | Signal<T> | (() => T);
 export type ChispaNode = string | number | Node | null;
 export type ChispaContent = ChispaNode | ChispaNode[] | Component | ComponentList; // | Signal<ChispaNode | ChispaNode[] | Component | ComponentList>;
+export type ChispaContentReactive = ChispaReactive<ChispaContent>;
+export type ChispaClasses = Record<string, ChispaReactive<boolean>>;
 export type ChispaCSSPropertiesStrings = {
-	[K in keyof CSSStyleDeclaration]?: string | Signal<string> | (() => string);
+	[K in keyof CSSStyleDeclaration]?: ChispaReactive<string>;
 };
 
 type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
@@ -16,7 +18,7 @@ interface INodeBuilderAdditionalProps<T, TNodes> {
 	addClass?: string;
 	classes?: ChispaClasses;
 	nodes?: TNodes;
-	inner?: ChispaContent | Signal<ChispaContent> | (() => ChispaContent);
+	inner?: ChispaContentReactive;
 	style?: ChispaCSSPropertiesStrings;
 	dataset?: Record<string, string>;
 	_ref?: (node: T) => void | { current: T | null };
@@ -147,7 +149,7 @@ export function setProps<T extends Element>(node: T, props: any) {
 	}
 }
 
-export function appendChild(node: Element | DocumentFragment, child: ChispaContent | Signal<ChispaContent>) {
+export function appendChild(node: Element | DocumentFragment, child: ChispaContentReactive) {
 	if (child === null) return;
 	if (typeof child === 'function') {
 		processSignalChild(node, computed(child));

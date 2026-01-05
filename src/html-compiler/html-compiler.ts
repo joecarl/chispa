@@ -212,7 +212,7 @@ export class HtmlCompiler {
 	}
 
 	private static getPropsTypename(cbid: string): string {
-		return 'Chispa' + cbid.charAt(0).toUpperCase() + cbid.slice(1) + 'Props';
+		return 'Cb' + cbid.charAt(0).toUpperCase() + cbid.slice(1) + 'Props';
 	}
 
 	private wrapFnComponent(cbid: string, jsx: string): string {
@@ -244,7 +244,7 @@ export class HtmlCompiler {
 		let itemsType = '{\n';
 		items.forEach((itemCbid) => {
 			const itemTypename = HtmlCompiler.getPropsTypename(itemCbid);
-			itemsType += `${itemCbid}?: ${itemTypename} | ChispaContent;\n`;
+			itemsType += `${itemCbid}?: ${itemTypename} | ChispaContentReactive;\n`;
 		});
 		itemsType += '}\n';
 
@@ -275,7 +275,7 @@ export class HtmlCompiler {
 
 		const jsOutput = `
             import { appendChild, getItem, getValidProps, setAttributes, setProps } from 'chispa';
-            import type { ChispaContent, ChispaNodeBuilderProps } from 'chispa';
+            import type { ChispaContentReactive, ChispaNodeBuilderProps } from 'chispa';
 			
             const SVG_NS = 'http://www.w3.org/2000/svg';
             
@@ -287,7 +287,7 @@ export class HtmlCompiler {
         `;
 
 		const dtsOutput = `
-            import type { ChispaContent, ChispaNodeBuilderProps } from 'chispa';
+            import type { ChispaContentReactive, ChispaNodeBuilderProps } from 'chispa';
             
             ${typedefs}
             
