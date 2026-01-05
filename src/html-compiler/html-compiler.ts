@@ -56,7 +56,7 @@ export class HtmlCompiler {
 		finalClass = finalClass.trim();
 
 		if (isComponent) {
-			finalClass = `buildClass('${finalClass}', props.addClass, props.classes)`;
+			finalClass = `['${finalClass}', props.addClass].join(' ').trim()`;
 			return ` 'class': ${finalClass}, `;
 		} else {
 			return ` 'class': "${finalClass}", `;
@@ -274,7 +274,7 @@ export class HtmlCompiler {
 		}
 
 		const jsOutput = `
-            import { appendChild, getItem, getValidProps, buildClass, setAttributes, setProps } from 'chispa';
+            import { appendChild, getItem, getValidProps, setAttributes, setProps } from 'chispa';
             import type { ChispaContent, ChispaNodeBuilderProps } from 'chispa';
 			
             const SVG_NS = 'http://www.w3.org/2000/svg';

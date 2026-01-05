@@ -2,7 +2,7 @@ import { Component, ComponentList } from './components';
 import { globalContext } from './context';
 import { computed, isSignal, type Signal } from './signals';
 
-export type ChispaClasses = Record<string, boolean>;
+export type ChispaClasses = Record<string, boolean | Signal<boolean> | (() => boolean)>;
 export type ChispaNode = string | number | Node | null;
 export type ChispaContent = ChispaNode | ChispaNode[] | Component | ComponentList; // | Signal<ChispaNode | ChispaNode[] | Component | ComponentList>;
 export type ChispaCSSPropertiesStrings = {
@@ -23,27 +23,7 @@ interface INodeBuilderAdditionalProps<T, TNodes> {
 }
 export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes>;
 
-function makeclass(classes: ChispaClasses) {
-	let finalClasses = [];
-
-	for (const className in classes) {
-		if (classes[className]) {
-			finalClasses.push(className);
-		}
-	}
-
-	return finalClasses.join(' ').trim();
-}
-
-export function buildClass(literalValue: string, additionalValue?: string, classes?: ChispaClasses) {
-	const parts = [];
-	if (literalValue) parts.push(literalValue);
-	if (additionalValue) parts.push(additionalValue);
-	parts.push(makeclass(classes ?? {}));
-	return parts.join(' ').trim();
-}
-
-const forbiddenProps = ['addClass', 'classes', 'nodes', 'inner', '_ref'];
+const forbiddenProps = ['addClass', 'nodes', 'inner', '_ref'];
 
 export function getValidProps(props: any) {
 	const finalProps: any = {};
@@ -106,6 +86,37 @@ export function setProps<T extends Element>(node: T, props: any) {
 			}
 			delete props.style;
 		}
+
+		if (props.classes !== undefined) {
+			const classes = props.classes;
+			for (const className in classes) {
+				if (typeof classes[className] === 'function') {
+					globalContext.addReactivity(() => {
+						if (classes[className]()) {
+							node.classList.add(className);
+						} else {
+							node.classList.remove(className);
+						}
+					});
+				} else if (isSignal(classes[className])) {
+					globalContext.addReactivity(() => {
+						if (classes[className].get()) {
+							node.classList.add(className);
+						} else {
+							node.classList.remove(className);
+						}
+					});
+				} else {
+					if (classes[className]) {
+						node.classList.add(className);
+					} else {
+						node.classList.remove(className);
+					}
+				}
+			}
+			delete props.classes;
+		}
+
 		if (props.dataset !== undefined) {
 			const dataset = props.dataset;
 			for (const datasetKey in dataset) {

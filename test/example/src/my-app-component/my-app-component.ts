@@ -36,7 +36,11 @@ export const MyApp = component(() => {
 	const length = signal(1);
 
 	return tpl.fragment({
-		elspan: { inner: length, style: { backgroundColor: () => makeColor(length.get()) } },
+		elspan: {
+			inner: length,
+			style: { backgroundColor: () => makeColor(length.get()) },
+			classes: { highlighted: () => length.get() >= 10 },
+		},
 		eldiv: DivSimpatico({ length }),
 		incBtn: {
 			onclick: () => {

@@ -1,6 +1,6 @@
 {
 	"name": "chispa",
-	"version": "0.2.6",
+	"version": "0.2.7",
 	"description": "A fully declarative UI reactive framework for building web applications.",
 	"author": "José Carlos HR <joecarlhr@gmail.com>",
 	"license": "MIT",
