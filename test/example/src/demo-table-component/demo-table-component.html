@@ -1,11 +1,11 @@
-<h1> Demo tabla </h1>
+<h1>Demo tabla</h1>
 
-<div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
-	<button data-cb="add-btn">Añadir</button>
-	<button data-cb="toggle-btn">Toggle</button>
+<div class="controls-row">
+	<button data-cb="add-btn">Añadir Fila</button>
+	<button data-cb="toggle-btn" class="btn-secondary">Toggle Dinámico</button>
 </div>
 
-<table style="margin-bottom: 1em;">
+<table>
 	<thead>
 		<tr>
 			<th>ID</th>
@@ -17,38 +17,37 @@
 	</thead>
 	<tbody class="list-wr">
 		<tr class="list-row">
-			<td>-</td>
-			<td>Fila fija arriba</td>
-			<td>-</td>
-			<td>-</td>
+			<td class="text-muted">-</td>
+			<td class="font-medium">Fila fija arriba</td>
+			<td class="text-muted">-</td>
+			<td class="text-muted">-</td>
 			<td></td>
 		</tr>
 		<tr data-cb="list-row" class="list-row">
 			<td data-cb="id">1</td>
-			<td data-cb="name">Pedro</td>
+			<td data-cb="name" class="font-semibold text-primary">Pedro</td>
 			<td data-cb="age">34</td>
 			<td data-cb="city">Almen</td>
 			<td class="buttons-cell">
-				<div style="display: flex; gap: 4px; align-items: center; white-space: nowrap;">
+				<div class="flex-gap-sm">
 					<button data-cb="edit-btn">Edit</button>
-					<button data-cb="moveup-btn">Move up</button>
-					<button data-cb="remove-btn">Eliminar</button>
+					<button data-cb="moveup-btn">Up</button>
+					<button data-cb="remove-btn">Del</button>
 				</div>
 			</td>
 		</tr>
 		<tr class="list-row">
-
-			<td>-</td>
-			<td>Fila fija abajo</td>
-			<td>-</td>
-			<td>-</td>
+			<td class="text-muted">-</td>
+			<td class="font-medium">Fila fija abajo</td>
+			<td class="text-muted">-</td>
+			<td class="text-muted">-</td>
 			<td></td>
 		</tr>
 	</tbody>
-
 </table>
 
 <small>
 	Esta tabla permite añadir, editar, mover y eliminar filas dinámicamente.<br>
 	Pulsar el botón "Toggle" mostrará u ocultará las filas dinámicas (desmonta/monta el componente).
+</small>
 </small>
