@@ -12,9 +12,9 @@ describe('HTML Compiler', () => {
 		const { ts, dts } = await compiler.compile();
 
 		expect(ts).toContain('const template = {');
-		expect(ts).toContain('linkHome:');
+		expect(ts).toContain('links:');
 		expect(ts).toContain('routerAnchor:');
-		expect(dts).toContain('type CbLinkHomeProps');
+		expect(dts).toContain('type CbLinksProps');
 		expect(dts).toContain('interface CbFragmentProps');
 
 		// Optional: write to file to inspect
