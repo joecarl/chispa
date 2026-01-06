@@ -175,7 +175,7 @@ export function appendChild(node: Element | DocumentFragment, child: ChispaConte
 function processSignalChild(node: Element | DocumentFragment, child: Signal<ChispaNode | Component<any> | ComponentList<any> | ChispaNode[]>) {
 	const anchor = document.createTextNode('');
 	node.appendChild(anchor);
-	let prevValue: Component | ComponentList = null;
+	let prevValue: Component | ComponentList | null = null;
 
 	globalContext.addReactivity(() => {
 		//console.log('Signal child changed', child);
@@ -202,10 +202,11 @@ function processSignalChild(node: Element | DocumentFragment, child: Signal<Chis
 	});
 }
 
-function toNode(n: ChispaNode | ChispaNode[]): Node {
+function toNode(n: ChispaNode | ChispaNode[]): Node | null {
 	if (Array.isArray(n)) {
 		const frag = document.createDocumentFragment();
-		frag.append(...n.map((c) => toNode(c)));
+		const nodes = n.map((c) => toNode(c)).filter((n) => n !== null);
+		frag.append(...nodes);
 		return frag;
 	} else if (n instanceof Node) {
 		return n;

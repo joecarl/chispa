@@ -26,7 +26,7 @@ abstract class Signal<T> {
 		{},
 		{
 			get: (_, prop) => {
-				return computed(() => this.get()[prop]);
+				return computed(() => this.get()[prop as keyof T]);
 			},
 		}
 	) as WithSignals<T>;

@@ -2,7 +2,7 @@ import { globalContext, IDisposable } from './context';
 import { computed, Signal, WritableSignal } from './signals';
 
 export type Dict = Record<string, any>;
-export type ComponentFactory<TProps extends Dict> = (props: TProps) => Node;
+export type ComponentFactory<TProps extends Dict> = (props: TProps) => Node | null;
 
 export class Component<TProps extends Dict = any> {
 	public onUnmount: (() => void) | null = null;
@@ -20,10 +20,10 @@ export class Component<TProps extends Dict = any> {
 	constructor(
 		private readonly factoryFn: ComponentFactory<TProps>,
 		public readonly key: any = null,
-		public readonly props: TProps = null
+		public readonly props: TProps | null = null
 	) {}
 
-	mount(container: Node, anchor: Node) {
+	mount(container: Node, anchor: Node | null = null) {
 		if (!this.silent) console.log('Mounting Component', this);
 
 		this.container = container;
@@ -48,21 +48,21 @@ export class Component<TProps extends Dict = any> {
 
 	reanchor(anchor: Node | null) {
 		this.anchor = anchor;
-		if (!this.container || !this.nodes) return;
 
 		//console.log('reanchoring', this.nodes, ' before anchor', this.anchor);
 		this.insertNodes();
 	}
 
 	private insertNodes() {
+		if (!this.container || !this.nodes) return;
 		// Insertar en la nueva posición
-		this.nodes.forEach((node) => {
+		for (const node of this.nodes) {
 			if (this.anchor) {
 				this.container.insertBefore(node, this.anchor);
 			} else {
 				this.container.appendChild(node);
 			}
-		});
+		}
 	}
 
 	unmount() {
@@ -98,13 +98,13 @@ export function component<TProps extends Dict = any>(factory: ComponentFactory<T
 	};
 }
 
-type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props: TProps) => Node;
+type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props?: TProps) => Node;
 type KeyFn<T> = (item: T, index: number) => any;
 
 export class ComponentList<TItem = any, TProps extends Dict = any> {
 	private readonly components: Map<string, Component<TProps>>;
-	private container: Node;
-	private anchor: Node; // Nodes must be inserted before this node
+	private container: Node | null = null; // Contenedor donde se montan los nodos
+	private anchor: Node | null = null; // Nodes must be inserted before this node
 	private currentKeys: any[] = [];
 	public disposables: any[] = [];
 
@@ -112,7 +112,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 		private readonly itemFactoryFn: ItemFactoryFn<TItem, TProps>,
 		private readonly keyFn: KeyFn<TItem>,
 		private readonly itemsSignal: WritableSignal<TItem[]>,
-		private readonly props: TProps = null
+		private readonly props: TProps | null = null
 	) {
 		this.components = new Map();
 	}
@@ -148,7 +148,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	 */
 	private createNewComponent(key: any): Component {
 		const factory = (props?: TProps) => {
-			const item = computed(() => this.itemsSignal.get().find((v, index) => this.keyFn(v, index) === key));
+			const item = computed(() => this.itemsSignal.get().find((v, index) => this.keyFn(v, index) === key)!);
 			const index = computed(() => this.itemsSignal.get().findIndex((v, index) => this.keyFn(v, index) === key));
 			return this.itemFactoryFn ? this.itemFactoryFn(item, index, this.itemsSignal, props) : null;
 		};
@@ -185,6 +185,10 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 		this.currentKeys = this.currentKeys.filter((key) => keys.includes(key));
 		//console.log('Current keys:', this.currentKeys, 'Target keys:', keys);
 
+		if (!this.container) {
+			console.warn('Container is null in synchronizeComponents');
+			return;
+		}
 		// Procesar cada key en el orden deseado
 		const container = this.container;
 
@@ -199,6 +203,10 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 
 			if (existingComponent) {
 				const prevComp = this.components.get(currentKey);
+				if (!prevComp || !prevComp.nodes) {
+					console.warn('Previous component or its nodes not found for key', currentKey);
+					return;
+				}
 				existingComponent.reanchor(prevComp.nodes[0]);
 				// Reordenar el array de keys actuales
 				this.currentKeys = this.currentKeys.filter((k) => k !== targetKey);
@@ -213,7 +221,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 		});
 	}
 
-	mount(container: Node, anchor: Node) {
+	mount(container: Node, anchor: Node | null = null) {
 		//console.log('Mounting ComponentList');
 		this.container = container;
 		this.anchor = anchor;
