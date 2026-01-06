@@ -1,53 +1,20 @@
-import { component, computed, type Signal, signal } from 'chispa';
+import { component, Link, Router } from 'chispa';
 import { DemoTable } from '../demo-table-component/demo-table-component';
 import { DemoForm } from '../demo-form-component/demo-form-component';
+import { Home } from '../home-component/home-component';
 import tpl from './my-app-component.html';
 
-interface IDivSimpaticoProps {
-	length: Signal<number>;
-}
-const DivSimpatico = component<IDivSimpaticoProps>((props) => {
-	const text = computed(() => {
-		const length = props.length.get();
-		if (length < 2) return '?';
-		if (length < 5) return 'Sigue';
-		if (length < 9) return 'Sigue, sigue';
-		if (length < 15) return 'Nada mal, continúa';
-		if (length < 20) return 'Suficiente';
-		return '¡Ya vale! como sigas así, esto va a acabar mal';
-	});
-
-	return tpl.eldiv({
-		inner: text,
-		style: { width: computed(() => 2 * props.length.get() + 'em') },
-	});
-});
-
-function makeColor(length: number) {
-	if (length < 2) return '#ccc';
-	if (length < 5) return '#8f8';
-	if (length < 9) return '#88f';
-	if (length < 15) return '#fa8';
-	if (length < 20) return '#f88';
-	return '#f44';
-}
-
 export const MyApp = component(() => {
-	const length = signal(1);
-
 	return tpl.fragment({
-		elspan: {
-			inner: length,
-			style: { backgroundColor: () => makeColor(length.get()) },
-			classes: { highlighted: () => length.get() >= 10 },
-		},
-		eldiv: DivSimpatico({ length }),
-		incBtn: {
-			onclick: () => {
-				length.update((v) => v + 1);
-			},
-		},
-		demoTableAnchor: DemoTable(),
-		demoFormAnchor: DemoForm(),
+		linkHome: Link({ to: '/', inner: 'Inicio' }),
+		linkTable: Link({ to: '/table', inner: 'Tabla Demo' }),
+		linkForm: Link({ to: '/form', inner: 'Formulario Demo' }),
+		routerAnchor: Router({
+			routes: [
+				{ path: '/', component: Home },
+				{ path: '/table', component: DemoTable },
+				{ path: '/form', component: DemoForm },
+			],
+		}),
 	});
 });
