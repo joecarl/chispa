@@ -27,6 +27,15 @@ export class Component<TProps extends Dict = any> {
 
 		this.container = container;
 		this.anchor = anchor;
+
+		// If mounting within another component, register for automatic unmounting
+		const parentComponent = globalContext.getCurrentComponent();
+		if (parentComponent && parentComponent !== this) {
+			parentComponent.addDisposable({
+				dispose: () => this.unmount(),
+			});
+		}
+
 		globalContext.pushExecutionStack('createComponent');
 		globalContext.pushComponentStack(this);
 		const node = this.factoryFn ? (this.factoryFn as any)(this.props) : null;
@@ -236,6 +245,14 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 		//console.log('Mounting ComponentList');
 		this.container = container;
 		this.anchor = anchor;
+
+		// If mounting within another component, register for automatic unmounting
+		const parentComponent = globalContext.getCurrentComponent();
+		if (parentComponent && parentComponent !== this) {
+			parentComponent.addDisposable({
+				dispose: () => this.unmount(),
+			});
+		}
 
 		globalContext.pushComponentStack(this);
 		globalContext.addReactivity(() => {

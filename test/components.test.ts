@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { component, onUnmount } from '../src';
+import { component, onUnmount, componentList, signal, appendChild } from '../src';
 
 describe('Component Creation, Mounting, and Unmounting', () => {
 	beforeEach(() => {
@@ -112,5 +112,82 @@ describe('Component Creation, Mounting, and Unmounting', () => {
 		comp.mount(container, anchor);
 		expect(container.children[0].textContent).toBe('Anchored');
 		expect(container.children[1]).toBe(anchor);
+	});
+
+	it('should unmount nested components when parent is unmounted', () => {
+		const childUnmountSpy = vi.fn();
+		const parentUnmountSpy = vi.fn();
+
+		const ChildComponent = component(() => {
+			onUnmount(childUnmountSpy);
+			const div = document.createElement('div');
+			div.textContent = 'Child';
+			return div;
+		});
+
+		const ParentComponent = component(() => {
+			onUnmount(parentUnmountSpy);
+			const div = document.createElement('div');
+			div.textContent = 'Parent';
+			const child = ChildComponent();
+			child.mount(div);
+			return div;
+		});
+
+		const comp = ParentComponent();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+
+		comp.mount(container);
+		expect(container.innerHTML).toContain('Parent');
+		expect(container.innerHTML).toContain('Child');
+		expect(childUnmountSpy).not.toHaveBeenCalled();
+		expect(parentUnmountSpy).not.toHaveBeenCalled();
+
+		comp.unmount();
+		expect(childUnmountSpy).toHaveBeenCalledTimes(1);
+		expect(parentUnmountSpy).toHaveBeenCalledTimes(1);
+		expect(container.innerHTML).toBe('');
+	});
+
+	it('should unmount nested ComponentList when parent is unmounted', () => {
+		const listItemUnmountSpy = vi.fn();
+		const parentUnmountSpy = vi.fn();
+
+		const ItemComponent = componentList<{ id: number }>(
+			(item, index, list) => {
+				onUnmount(listItemUnmountSpy);
+				const div = document.createElement('div');
+				appendChild(div, () => 'Item ' + item.get().id);
+				return div;
+			},
+			(item) => item.id
+		);
+
+		const ParentComponent = component(() => {
+			onUnmount(parentUnmountSpy);
+			const div = document.createElement('div');
+			div.textContent = 'Parent';
+			const listSignal = signal([{ id: 1 }, { id: 2 }]);
+			const list = ItemComponent(listSignal);
+			list.mount(div);
+			return div;
+		});
+
+		const comp = ParentComponent();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+
+		comp.mount(container);
+		expect(container.innerHTML).toContain('Parent');
+		expect(container.innerHTML).toContain('Item 1');
+		expect(container.innerHTML).toContain('Item 2');
+		expect(listItemUnmountSpy).not.toHaveBeenCalled();
+		expect(parentUnmountSpy).not.toHaveBeenCalled();
+
+		comp.unmount();
+		expect(listItemUnmountSpy).toHaveBeenCalledTimes(2); // Two items
+		expect(parentUnmountSpy).toHaveBeenCalledTimes(1);
+		expect(container.innerHTML).toBe('');
 	});
 });
