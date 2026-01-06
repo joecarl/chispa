@@ -1,6 +1,6 @@
 import { signal, computed, Signal } from './signals';
 import { component, Component, Dict } from './components';
-import { appendChild, setProps } from './builder';
+import { appendChild, ChispaNodeBuilderProps, setProps } from './builder';
 
 export interface Route {
 	path: string;
@@ -68,11 +68,8 @@ export const Router = component<{ routes: Route[] }>((props) => {
 	return container;
 });
 
-export interface LinkProps {
+export interface LinkProps extends ChispaNodeBuilderProps<HTMLAnchorElement, {}> {
 	to: string;
-	class?: string | Signal<string> | (() => string);
-	inner?: any;
-	[key: string]: any;
 }
 
 export const Link = component<LinkProps>((props) => {
