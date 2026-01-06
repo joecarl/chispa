@@ -1,14 +1,34 @@
-# chispa
+# Chispa
 
-**Chispa** es un framework de interfaz de usuario (UI) totalmente declarativo y reactivo para construir aplicaciones web modernas. Se centra en la simplicidad, el rendimiento y una gestión del estado intuitiva mediante señales (signals).
+Un motor UI reactivo y extremadamente minimalista.
+
+Chispa no es un framework dogmático: es un motor ligero que expone reactividad mínima sobre DOM real, pensado para integrarse, incrustarse y usarse desde herramientas y entornos donde las capas pesadas sobran.
+
+**Principio**: la función del componente se ejecuta una vez; el resto es flujo de datos (signals → DOM).
+
+**¿Para quién es chispa?**
+
+- Ideal para desarrolladores que necesitan control directo del DOM y baja complejidad mental.
+- Perfecto para IDEs, plugins, paneles embebidos, dashboards y UIs que requieren integración con código legado.
+
+**¿Para qué NO es chispa?**
+
+- No pretende (de momento) sustituir un framework de aplicación completo (SSR complejo, abstracciones de estado a gran escala).
+
+## Diferenciadores
+
+- **HTML real**: plantillas HTML importadas, sin JSX ni transformaciones mágicas.
+- **JS/TS real**: funciones de componente normales (se ejecutan una vez) y señales explícitas.
+- **Bindings directos signal → DOM**: actualizaciones precisas sin VDOM ni heurísticas.
+- **Motor embebible**: sin lifecycle complejo ni arquitectura impuesta; fácil de integrar y depurar.
 
 ## Características
 
--   ⚡ **Reactividad Fina**: Basado en Signals para actualizaciones precisas y eficientes del DOM.
--   🧩 **Componentes Funcionales**: Crea componentes reutilizables con funciones simples.
--   📄 **Plantillas HTML**: Separa la lógica de la vista importando archivos HTML directamente.
--   🛠️ **Integración con Vite**: Incluye un plugin de Vite para una experiencia de desarrollo fluida.
--   📦 **Ligero**: Sin dependencias pesadas en tiempo de ejecución.
+- ⚡ **Reactividad Fina**: Basado en Signals para actualizaciones precisas y eficientes del DOM.
+- 🧩 **Componentes Funcionales**: Crea componentes reutilizables con funciones simples.
+- 📄 **Plantillas HTML**: Separa la lógica de la vista importando archivos HTML directamente.
+- 🛠️ **Integración con Vite**: Incluye un plugin de Vite para una experiencia de desarrollo fluida.
+- 📦 **Ligero**: Sin dependencias pesadas en tiempo de ejecución.
 
 ## Instalación
 
@@ -87,7 +107,7 @@ appendChild(document.body, MyComponent());
 
 ### Reactividad
 
--   **`signal(initialValue)`**: Crea una señal reactiva.
+- **`signal(initialValue)`**: Crea una señal reactiva.
 
     ```typescript
     const count = signal(0);
@@ -95,15 +115,15 @@ appendChild(document.body, MyComponent());
     count.set(5); // Establecer valor
     ```
 
--   **`computed(() => ...)`**: Crea una señal derivada que se actualiza automáticamente cuando sus dependencias cambian.
+- **`computed(() => ...)`**: Crea una señal derivada que se actualiza automáticamente cuando sus dependencias cambian.
     ```typescript
     const double = computed(() => count.get() * 2);
     ```
 
 ### Componentes
 
--   **`component<Props>((props) => ...)`**: Define un nuevo componente.
--   **`appendChild(parent, child)`**: Función auxiliar para montar componentes en el DOM.
+- **`component<Props>((props) => ...)`**: Define un nuevo componente.
+- **`appendChild(parent, child)`**: Función auxiliar para montar componentes en el DOM.
 
 ## Licencia
 
