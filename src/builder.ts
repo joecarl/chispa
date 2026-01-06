@@ -20,7 +20,7 @@ interface INodeBuilderAdditionalProps<T, TNodes> {
 	nodes?: TNodes;
 	inner?: ChispaContentReactive;
 	style?: ChispaCSSPropertiesStrings;
-	dataset?: Record<string, string>;
+	dataset?: Record<string, ChispaReactive<string>>;
 	_ref?: (node: T) => void | { current: T | null };
 }
 export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes>;
@@ -69,21 +69,21 @@ export function setAttributes(node: Element, attributes: Record<string, string>)
 	}
 }
 
-export function setProps<T extends Element>(node: T, props: any) {
+export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderProps<T, any>) {
 	if (node instanceof HTMLElement) {
 		if (props.style !== undefined) {
 			const style = props.style;
 			for (const styleKey in style) {
-				if (typeof style[styleKey] === 'function') {
+				let styleValue = style[styleKey]!;
+				if (typeof styleValue === 'function') {
+					styleValue = computed(styleValue);
+				}
+				if (isSignal(styleValue)) {
 					globalContext.addReactivity(() => {
-						node.style[styleKey as any] = style[styleKey]();
-					});
-				} else if (isSignal(style[styleKey])) {
-					globalContext.addReactivity(() => {
-						node.style[styleKey as any] = style[styleKey].get();
+						node.style[styleKey] = styleValue.get();
 					});
 				} else {
-					node.style[styleKey as any] = style[styleKey];
+					node.style[styleKey] = styleValue;
 				}
 			}
 			delete props.style;
@@ -111,19 +111,19 @@ export function setProps<T extends Element>(node: T, props: any) {
 			} else {
 				node.classList.add(addClass);
 			}
-
 			delete props.addClass;
 		}
 
 		if (props.classes !== undefined) {
 			const classes = props.classes;
 			for (const className in classes) {
-				if (typeof classes[className] === 'function') {
-					classes[className] = computed(classes[className]);
+				let apply = classes[className];
+				if (typeof apply === 'function') {
+					apply = computed(apply);
 				}
-				if (isSignal(classes[className])) {
+				if (isSignal(apply)) {
 					globalContext.addReactivity(() => {
-						if (classes[className].get()) {
+						if (apply.get()) {
 							node.classList.add(className);
 						} else {
 							node.classList.remove(className);
@@ -137,28 +137,30 @@ export function setProps<T extends Element>(node: T, props: any) {
 					}
 				}
 			}
-
 			delete props.classes;
 		}
 
 		if (props.dataset !== undefined) {
 			const dataset = props.dataset;
 			for (const datasetKey in dataset) {
-				if (isSignal(dataset[datasetKey])) {
+				let ds = dataset[datasetKey];
+				if (typeof ds === 'function') {
+					ds = computed(ds);
+				}
+				if (isSignal(ds)) {
 					globalContext.addReactivity(() => {
-						node.dataset[datasetKey] = dataset[datasetKey].get();
+						node.dataset[datasetKey] = ds.get();
 					});
 				} else {
-					node.dataset[datasetKey] = dataset[datasetKey];
+					node.dataset[datasetKey] = ds;
 				}
 			}
-
 			delete props.dataset;
 		}
 	}
 
 	for (const prop in props) {
-		const propValue = props[prop];
+		const propValue = (props as any)[prop];
 		//console.log('setting prop', prop, propValue )
 		if (isSignal(propValue)) {
 			globalContext.addReactivity(() => {
