@@ -13,12 +13,18 @@ const DivSimpatico = component<IDivSimpaticoProps>((props) => {
 		if (length < 9) return 'Sigue, sigue';
 		if (length < 15) return 'Nada mal, continúa';
 		if (length < 20) return 'Suficiente';
-		return '¡Ya vale! como sigas así, esto va a acabar mal';
+		return 'No te esfuerces más, puedo oler la asíntota.';
+	});
+
+	const width = computed(() => {
+		const w0 = 5;
+		const exp = props.length.get();
+		return 100 - (100 - w0) * Math.pow(0.9, exp);
 	});
 
 	return tpl.eldiv({
 		inner: text,
-		style: { width: computed(() => 2 * props.length.get() + 'em') },
+		style: { width: () => width.get() + '%' },
 	});
 });
 
