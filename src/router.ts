@@ -28,6 +28,13 @@ export function navigate(to: string, replace = false) {
 	currentPath.set(to);
 }
 
+export function pathMatches(path: string): Signal<boolean> {
+	return computed(() => {
+		const current = currentPath.get();
+		return match(path, current) !== null;
+	});
+}
+
 function match(routePath: string, currentPath: string): Dict | null {
 	if (routePath === '*') return {};
 	const routeParts = routePath.split('/').filter(Boolean);

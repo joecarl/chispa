@@ -1,8 +1,9 @@
+import { ChispaContent } from './builder';
 import { globalContext, IDisposable } from './context';
 import { computed, Signal, WritableSignal } from './signals';
 
 export type Dict = Record<string, any>;
-export type ComponentFactory<TProps extends Dict> = (props: TProps) => Node | null;
+export type ComponentFactory<TProps extends Dict> = (props: TProps) => ChispaContent;
 
 export class Component<TProps extends Dict = any> {
 	public onUnmount: (() => void) | null = null;
@@ -98,7 +99,7 @@ export function component<TProps extends Dict = any>(factory: ComponentFactory<T
 	};
 }
 
-type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props?: TProps) => Node;
+type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props?: TProps) => ChispaContent;
 type KeyFn<T> = (item: T, index: number) => any;
 
 export class ComponentList<TItem = any, TProps extends Dict = any> {
