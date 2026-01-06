@@ -110,7 +110,7 @@ export class Reactivity implements IDisposable {
 	constructor(private readonly action: () => void) {
 		const currentComponent = globalContext.getCurrentComponent();
 		if (currentComponent) {
-			currentComponent.disposables.push(this);
+			currentComponent.addDisposable(this);
 		} else {
 			console.warn('Creating a Reactivity outside of a component');
 		}

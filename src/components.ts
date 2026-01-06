@@ -6,15 +6,13 @@ export type Dict = Record<string, any>;
 export type ComponentFactory<TProps extends Dict> = (props: TProps) => ChispaContent;
 
 export class Component<TProps extends Dict = any> {
-	public onUnmount: (() => void) | null = null;
-
 	public nodes: Node[] | null = null;
 
 	private container: Node | null = null;
 
 	private anchor: Node | null = null;
 
-	public disposables: IDisposable[] = [];
+	private disposables: IDisposable[] = [];
 
 	public silent = true;
 
@@ -66,12 +64,13 @@ export class Component<TProps extends Dict = any> {
 		}
 	}
 
+	addDisposable(disposable: IDisposable) {
+		this.disposables.push(disposable);
+	}
+
 	unmount() {
 		if (!this.silent) console.log('Unmounting Component', this);
-		if (this.onUnmount) {
-			this.onUnmount();
-			this.onUnmount = null;
-		}
+
 		if (this.nodes) {
 			this.nodes.forEach((node) => {
 				if (node && node.parentNode) {
@@ -97,6 +96,17 @@ export function component<TProps extends Dict = any>(factory: ComponentFactory<T
 	return (props?: TProps) => {
 		return new Component(factory, null, props);
 	};
+}
+
+export function onUnmount(unmountFn: () => void) {
+	const currentComponent = globalContext.getCurrentComponent();
+	if (currentComponent) {
+		currentComponent.addDisposable({
+			dispose: unmountFn,
+		});
+	} else {
+		throw new Error('onUnmount must be called within a component context');
+	}
 }
 
 type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props?: TProps) => ChispaContent;
@@ -232,6 +242,10 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 			this.synchronizeComponents();
 		});
 		globalContext.popComponentStack();
+	}
+
+	addDisposable(disposable: IDisposable) {
+		this.disposables.push(disposable);
 	}
 
 	unmount() {
