@@ -56,12 +56,7 @@ export class HtmlCompiler {
 
 		finalClass = finalClass.trim();
 
-		if (isComponent) {
-			finalClass = `['${finalClass}', props.addClass].join(' ').trim()`;
-			return ` 'class': ${finalClass}, `;
-		} else {
-			return ` 'class': "${finalClass}", `;
-		}
+		return ` 'class': "${finalClass}", `;
 	}
 
 	private getHtmlNodeAttrs(domNode: Element, isComponent: boolean): string {

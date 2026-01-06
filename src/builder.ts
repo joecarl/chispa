@@ -15,7 +15,7 @@ type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
 
 type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
 interface INodeBuilderAdditionalProps<T, TNodes> {
-	addClass?: string;
+	addClass?: ChispaReactive<string>;
 	classes?: ChispaClasses;
 	nodes?: TNodes;
 	inner?: ChispaContentReactive;
@@ -25,7 +25,7 @@ interface INodeBuilderAdditionalProps<T, TNodes> {
 }
 export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes>;
 
-const forbiddenProps = ['addClass', 'nodes', 'inner', '_ref'];
+const forbiddenProps = ['nodes', 'inner', '_ref'];
 
 export function getValidProps(props: any) {
 	const finalProps: any = {};
@@ -89,18 +89,39 @@ export function setProps<T extends Element>(node: T, props: any) {
 			delete props.style;
 		}
 
+		if (props.addClass !== undefined) {
+			let addClass = props.addClass;
+			let prevClass: string | null = null;
+
+			if (typeof addClass === 'function') {
+				addClass = computed(addClass);
+			}
+
+			if (isSignal(addClass)) {
+				globalContext.addReactivity(() => {
+					const cls = addClass.get();
+					if (cls !== prevClass) {
+						if (prevClass) {
+							node.classList.remove(prevClass);
+						}
+						node.classList.add(cls);
+					}
+					prevClass = cls;
+				});
+			} else {
+				node.classList.add(addClass);
+			}
+
+			delete props.addClass;
+		}
+
 		if (props.classes !== undefined) {
 			const classes = props.classes;
 			for (const className in classes) {
 				if (typeof classes[className] === 'function') {
-					globalContext.addReactivity(() => {
-						if (classes[className]()) {
-							node.classList.add(className);
-						} else {
-							node.classList.remove(className);
-						}
-					});
-				} else if (isSignal(classes[className])) {
+					classes[className] = computed(classes[className]);
+				}
+				if (isSignal(classes[className])) {
 					globalContext.addReactivity(() => {
 						if (classes[className].get()) {
 							node.classList.add(className);
@@ -116,6 +137,7 @@ export function setProps<T extends Element>(node: T, props: any) {
 					}
 				}
 			}
+
 			delete props.classes;
 		}
 
@@ -130,6 +152,7 @@ export function setProps<T extends Element>(node: T, props: any) {
 					node.dataset[datasetKey] = dataset[datasetKey];
 				}
 			}
+
 			delete props.dataset;
 		}
 	}
