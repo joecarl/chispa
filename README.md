@@ -44,11 +44,26 @@ Para usar las plantillas HTML, necesitas configurar el plugin de Chispa en tu `v
 
 ```typescript
 import { defineConfig } from 'vite';
-import { chispaHtmlPlugin } from 'chispa';
+import { chispaHtmlPlugin } from 'chispa/vite-plugin';
 
 export default defineConfig({
 	plugins: [chispaHtmlPlugin()],
 });
+```
+
+Para que el tipado funcione correctamente también es necesario agregar esto en `tsconfig.json`:
+
+```json
+{
+	"compilerOptions": {
+		// ...
+		"rootDirs": [
+			// ...
+			".chispa/types"
+		]
+	}
+	// ...
+}
 ```
 
 ## Uso Básico
@@ -90,7 +105,7 @@ export const MyComponent = component(() => {
 });
 ```
 
-A diferencia de otros frameworks de UI, la función del componente se ejecuta una sola vez al montarse. Las actualizaciones de estado no provocan que la función del componente se vuelva a ejecutar. En su lugar, el sistema actualiza de manera atómica únicamente los nodos o atributos vinculados a la señal modificada. Por este motivo, generalmente no mala idea leer el valor de las señales directamente en el cuerpo de la función del componente; su lectura debe realizarse dentro de callbacks o efectos.
+A diferencia de otros frameworks de UI, la función del componente se ejecuta una sola vez al montarse. Las actualizaciones de estado no provocan que la función del componente se vuelva a ejecutar. En su lugar, el sistema actualiza de manera atómica únicamente los nodos o atributos vinculados a la señal modificada. Por este motivo no está permitido leer el valor de las señales directamente en el cuerpo de la función factory del componente; su lectura debe realizarse dentro de callbacks o efectos.
 
 ### 2. Montar la Aplicación
 
