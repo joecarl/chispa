@@ -126,4 +126,8 @@ export function computed<T>(fn: () => T) {
 	return sig as Signal<T>;
 }
 
+export function effect(fn: () => void) {
+	globalContext.addReactivity(fn);
+}
+
 export type { Signal, WritableSignal };
