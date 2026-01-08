@@ -1,5 +1,5 @@
 export type { Signal, WritableSignal } from './signals';
-export { isSignal, computed, signal } from './signals';
+export { isSignal, isWriteableSignal, computed, signal } from './signals';
 export { globalContext } from './context';
 export { component, onUnmount, componentList } from './components';
 export { appendChild, getItem, getValidProps, setAttributes, setProps } from './builder';

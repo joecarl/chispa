@@ -1,4 +1,4 @@
-import { component, computed, signal, componentList, Signal } from 'chispa';
+import { component, computed, signal, componentList, Signal, isWriteableSignal } from 'chispa';
 import tpl from './demo-table-component.html';
 
 interface IDemoItem {
@@ -10,6 +10,9 @@ interface IDemoItem {
 
 const MyList = componentList<IDemoItem, { citySuffix: Signal<string> }>(
 	(item, index, list, props) => {
+		if (!isWriteableSignal(list)) {
+			throw new Error('List must be a writable signal');
+		}
 		return tpl.listRow({
 			nodes: {
 				id: { inner: item.computed.id },

@@ -92,6 +92,10 @@ export function isSignal(value: any): value is Signal<any> {
 	return value instanceof Signal;
 }
 
+export function isWriteableSignal<T>(value: Signal<T>): value is WritableSignal<T> {
+	return value instanceof WritableSignal;
+}
+
 export function signal<T>(initialValue: T) {
 	const sig = new WritableSignal(initialValue);
 

@@ -118,7 +118,7 @@ export function onUnmount(unmountFn: () => void) {
 	}
 }
 
-type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: WritableSignal<T[]>, props?: TProps) => ChispaContent;
+type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: Signal<T[]>, props?: TProps) => ChispaContent;
 type KeyFn<T> = (item: T, index: number) => any;
 
 export class ComponentList<TItem = any, TProps extends Dict = any> {
@@ -131,7 +131,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	constructor(
 		private readonly itemFactoryFn: ItemFactoryFn<TItem, TProps>,
 		private readonly keyFn: KeyFn<TItem>,
-		private readonly itemsSignal: WritableSignal<TItem[]>,
+		private readonly itemsSignal: Signal<TItem[]>,
 		private readonly props: TProps | null = null
 	) {
 		this.components = new Map();
@@ -280,14 +280,14 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 export function componentList<TItem>(
 	itemFactoryFn: ItemFactoryFn<TItem, any>,
 	keyFn: KeyFn<TItem>
-): (listSignal: WritableSignal<TItem[]>, props?: any) => ComponentList<TItem>;
+): (listSignal: Signal<TItem[]>, props?: any) => ComponentList<TItem>;
 export function componentList<TItem, TProps extends Dict>(
 	itemFactoryFn: ItemFactoryFn<TItem, TProps>,
 	keyFn: KeyFn<TItem>
-): (listSignal: WritableSignal<TItem[]>, props: TProps) => ComponentList<TItem, TProps>;
+): (listSignal: Signal<TItem[]>, props: TProps) => ComponentList<TItem, TProps>;
 
 export function componentList<TItem, TProps extends Dict = any>(itemFactoryFn: ItemFactoryFn<TItem, TProps>, keyFn: KeyFn<TItem>) {
-	return (listSignal: WritableSignal<TItem[]>, props?: TProps) => {
+	return (listSignal: Signal<TItem[]>, props?: TProps) => {
 		const list = new ComponentList(itemFactoryFn, keyFn, listSignal, props);
 		return list;
 	};
