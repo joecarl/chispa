@@ -21,4 +21,14 @@ describe('HTML Compiler', () => {
 		// fs.writeFileSync(htmlPath + '.generated.ts', ts);
 		// fs.writeFileSync(htmlPath + '.generated.d.ts', dts);
 	});
+
+	it('preserves newline entities in attribute values (e.g. placeholder with &#10;)', async () => {
+		const htmlContent = `<textarea placeholder="Linea1&#10;Linea2"></textarea>`;
+		const compiler = new HtmlCompiler(htmlContent);
+		const { ts } = await compiler.compile();
+
+		// The compiled code should include the attribute value with an escaped newline (\n)
+		expect(ts).toContain('placeholder');
+		expect(ts).toContain('\\n');
+	});
 });

@@ -70,7 +70,8 @@ export class HtmlCompiler {
 			if (attrName === 'data-cb') return;
 			if (attrName === 'class') return;
 
-			attrValue = attrValue.replace(/\n/g, ' ').replace(/"/g, '\\"');
+			// Use JSON.stringify to properly escape newlines, quotes and other characters
+			const valueLiteral = JSON.stringify(attrValue);
 
 			// Simplified logic compared to PHP which had cbt.prefixize... calls
 			// Assuming we just output the value for now as I don't see cbt implementation here
@@ -90,9 +91,9 @@ export class HtmlCompiler {
 				// src/index.ts does NOT export CoreBuilderTools.
 				// It exports appendChild, getItem, etc.
 				// Maybe I should just output the string for now.
-				attrsHtml += ` '${attrName}': "${attrValue}", `;
+				attrsHtml += ` '${attrName}': ${valueLiteral}, `;
 			} else {
-				attrsHtml += ` '${attrName}': "${attrValue}", `;
+				attrsHtml += ` '${attrName}': ${valueLiteral}, `;
 			}
 		});
 
