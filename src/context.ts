@@ -53,15 +53,33 @@ class AppContext {
 		return this.reactivityContextStack[this.reactivityContextStack.length - 1];
 	}
 
+	// Maximum number of iterations to process during a scheduled refresh. Prevents
+	// unbounded loops in case of uncontrolled reactivity cascades. Use the
+	// `globalContext.maxScheduleIterations` field to override in tests or
+	// special cases.
+	public maxScheduleIterations = 100;
+
 	scheduleRefresh() {
 		if (this.refreshTimeout) {
 			clearTimeout(this.refreshTimeout);
 		}
 		this.refreshTimeout = setTimeout(() => {
-			// Process dirty contexts until none remain (handles reactivity cascades)
-			while (this.dirtyReactivities.size > 0) {
+			let iteration = 0;
+			// Process dirty contexts until none remain, or until the iteration limit
+			// is reached (this avoids infinite loops when reactivities keep
+			// re-adding themselves or each other).
+			while (this.dirtyReactivities.size > 0 && iteration < this.maxScheduleIterations) {
+				iteration++;
 				const dirtyContexts = Array.from(this.dirtyReactivities);
 				dirtyContexts.forEach((ctx) => ctx.process());
+			}
+
+			if (this.dirtyReactivities.size > 0) {
+				// Warn once if we stopped early due to the iteration limit. We also
+				// clear the set to avoid repeated warnings and to avoid leaving the
+				// system in a permanently spinning state.
+				console.warn(`[AppContext.scheduleRefresh] possible uncontrolled reactivity cascade: processed ${iteration} iterations — aborting.`);
+				this.dirtyReactivities.clear();
 			}
 		}, 0);
 	}
