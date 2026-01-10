@@ -58,8 +58,11 @@ class AppContext {
 			clearTimeout(this.refreshTimeout);
 		}
 		this.refreshTimeout = setTimeout(() => {
-			const dirtyContexts = Array.from(this.dirtyReactivities);
-			dirtyContexts.forEach((ctx) => ctx.process());
+			// Process dirty contexts until none remain (handles reactivity cascades)
+			while (this.dirtyReactivities.size > 0) {
+				const dirtyContexts = Array.from(this.dirtyReactivities);
+				dirtyContexts.forEach((ctx) => ctx.process());
+			}
 		}, 0);
 	}
 
@@ -117,8 +120,6 @@ export class Reactivity implements IDisposable {
 	}
 
 	markDirty() {
-		// Mark the context as dirty (needing re-render)
-		//console.log('marking context as dirty');
 		this.dirty = true;
 		globalContext.addDirtyContext(this);
 		globalContext.scheduleRefresh();

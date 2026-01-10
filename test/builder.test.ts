@@ -89,3 +89,61 @@ describe('Builder Props: addClass and classes', () => {
 		});
 	});
 });
+
+describe('Builder Props: reactive props', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('should handle props as a function', async () => {
+		const div = document.createElement('div');
+		const alternative = signal(1);
+
+		setProps(div, () => (alternative.get() === 1 ? { id: 'initial' } : { id: 'updated' }));
+		expect(div.id).toBe('initial');
+
+		alternative.set(2);
+		await vi.runOnlyPendingTimersAsync();
+		expect(div.id).toBe('updated');
+	});
+
+	it('should handle props as a signal', async () => {
+		const div = document.createElement('div');
+		const propsSignal = signal({ id: 'initial', title: 'test' });
+		setProps(div, propsSignal);
+		expect(div.id).toBe('initial');
+		expect(div.title).toBe('test');
+
+		propsSignal.set({ id: 'updated', title: 'new' });
+		await vi.runOnlyPendingTimersAsync();
+		expect(div.id).toBe('updated');
+		expect(div.title).toBe('new');
+	});
+
+	it('should handle reactive style in props signal', async () => {
+		const div = document.createElement('div');
+		const propsSignal = signal({ style: { color: 'red' } });
+		setProps(div, propsSignal);
+		expect(div.style.color).toBe('red');
+
+		propsSignal.set({ style: { color: 'blue' } });
+		await vi.runOnlyPendingTimersAsync();
+		expect(div.style.color).toBe('blue');
+	});
+
+	it('should handle reactive dataset in props signal', async () => {
+		const div = document.createElement('div');
+		const propsSignal = signal({ dataset: { test: 'value' } });
+		setProps(div, propsSignal);
+		expect(div.dataset.test).toBe('value');
+
+		propsSignal.set({ dataset: { test: 'newvalue' } });
+		await vi.runOnlyPendingTimersAsync();
+		expect(div.dataset.test).toBe('newvalue');
+	});
+});

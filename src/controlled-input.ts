@@ -1,5 +1,5 @@
 import { globalContext } from './context';
-import { WritableSignal } from './signals';
+import { Signal, WritableSignal } from './signals';
 
 export interface ControlledInputOptions {
 	/**
@@ -13,6 +13,11 @@ export interface ControlledInputOptions {
 	 * If it returns false, the change is rejected and the previous value is restored.
 	 */
 	validate?: (value: string) => boolean;
+}
+
+export interface SelectOption {
+	value: string;
+	label: string;
 }
 
 export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElement, signal: WritableSignal<string>, options: ControlledInputOptions = {}) {
@@ -77,5 +82,70 @@ export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElem
 	// Return a cleanup function
 	return () => {
 		element.removeEventListener('input', handleInput);
+	};
+}
+
+export function bindControlledSelect(element: HTMLSelectElement, signal: WritableSignal<string>, optionsSignal?: Signal<SelectOption[]>) {
+	// Function to update options
+	const updateOptions = (options: SelectOption[]) => {
+		// Clear existing options
+		element.innerHTML = '';
+		// Add new options
+		options.forEach((option) => {
+			const optElement = document.createElement('option');
+			optElement.value = option.value;
+			optElement.textContent = option.label;
+			element.appendChild(optElement);
+		});
+		// Ensure the current value is set
+		element.value = signal.get();
+	};
+
+	// Initialize options if provided
+	if (optionsSignal) {
+		updateOptions(optionsSignal.get());
+	}
+
+	// Initialize value
+	element.value = signal.initialValue;
+
+	// Handle change events
+	const handleChange = (e: Event) => {
+		const target = e.target as HTMLSelectElement;
+		let newValue = target.value;
+		const originalValue = signal.get();
+
+		// Update signal
+		if (newValue !== originalValue) {
+			signal.set(newValue);
+		}
+
+		// Force update DOM if it doesn't match the new value (e.g. transformed or rejected)
+		if (target.value !== newValue) {
+			target.value = newValue;
+		}
+	};
+
+	element.addEventListener('change', handleChange);
+
+	// Subscribe to signal changes to update the select if it changes externally
+	globalContext.addReactivity(() => {
+		const newValue = signal.get();
+		// Only update if the value is actually different
+		if (element.value !== newValue) {
+			element.value = newValue;
+		}
+	});
+
+	// Subscribe to options signal changes if provided
+	if (optionsSignal) {
+		globalContext.addReactivity(() => {
+			updateOptions(optionsSignal.get());
+		});
+	}
+
+	// Return a cleanup function
+	return () => {
+		element.removeEventListener('change', handleChange);
 	};
 }

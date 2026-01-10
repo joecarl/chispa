@@ -147,7 +147,7 @@ export class HtmlCompiler {
 
 				htmlNodeCode += `setAttributes(node, ${attrs});\n`;
 				if (isComponent) {
-					htmlNodeCode += `setProps(node, getValidProps(props));\n`;
+					htmlNodeCode += `setProps(node, props);\n`;
 				}
 
 				let subTs = '';
@@ -251,9 +251,9 @@ export class HtmlCompiler {
 		} else {
 			const tagname = this.componentsTags[cbid];
 			if (this.isSvg[cbid]) {
-				return `type ${typename} = ChispaNodeBuilderProps<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
+				return `type ${typename} = ChispaNodeBuilderPropsReactive<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
 			} else {
-				return `type ${typename} = ChispaNodeBuilderProps<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
+				return `type ${typename} = ChispaNodeBuilderPropsReactive<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
 			}
 		}
 	}
@@ -270,8 +270,8 @@ export class HtmlCompiler {
 		}
 
 		const jsOutput = `
-            import { appendChild, getItem, getValidProps, setAttributes, setProps } from 'chispa';
-            import type { ChispaContentReactive, ChispaNodeBuilderProps } from 'chispa';
+            import { appendChild, getItem, setAttributes, setProps } from 'chispa';
+            import type { ChispaContentReactive, ChispaNodeBuilderPropsReactive } from 'chispa';
 			
             const SVG_NS = 'http://www.w3.org/2000/svg';
             
@@ -283,7 +283,7 @@ export class HtmlCompiler {
         `;
 
 		const dtsOutput = `
-            import type { ChispaContentReactive, ChispaNodeBuilderProps } from 'chispa';
+            import type { ChispaContentReactive, ChispaNodeBuilderPropsReactive } from 'chispa';
             
             ${typedefs}
             

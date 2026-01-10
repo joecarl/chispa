@@ -14,25 +14,28 @@ export type ChispaCSSPropertiesStrings = {
 type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
 
 type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
-interface INodeBuilderAdditionalProps<T, TNodes> {
+interface INodeBuilderSpecialProps {
 	addClass?: ChispaReactive<string>;
 	classes?: ChispaClasses;
-	nodes?: TNodes;
-	inner?: ChispaContentReactive;
 	style?: ChispaCSSPropertiesStrings;
 	dataset?: Record<string, ChispaReactive<string>>;
+}
+interface INodeBuilderAdditionalProps<T, TNodes> {
+	nodes?: TNodes;
+	inner?: ChispaContentReactive;
 	_ref?: (node: T) => void | { current: T | null };
 }
-export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes>;
+export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes> & INodeBuilderSpecialProps;
+export type ChispaNodeBuilderPropsReactive<T, TNodes> = ChispaReactive<ChispaNodeBuilderProps<T, TNodes>>;
 
 const forbiddenProps = ['nodes', 'inner', '_ref'];
 
-export function getValidProps(props: any) {
+export function getValidProps<T>(props: ChispaNodeBuilderProps<T, any>) {
 	const finalProps: any = {};
 
 	for (const propName in props) {
 		if (forbiddenProps.indexOf(propName) === -1) {
-			finalProps[propName] = props[propName];
+			finalProps[propName] = props[propName as keyof typeof props];
 		}
 	}
 
@@ -40,7 +43,7 @@ export function getValidProps(props: any) {
 		//finalProps.ref = props._ref;
 	}
 
-	return finalProps;
+	return finalProps as ChispaNodeBuilderProps<T, any>;
 }
 
 export function getItem<T>(template: T, items: any, itemName: keyof T) {
@@ -69,94 +72,22 @@ export function setAttributes(node: Element, attributes: Record<string, string>)
 	}
 }
 
-export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderProps<T, any>) {
+export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPropsReactive<T, any>) {
+	let _props = props;
+	if (typeof _props === 'function') {
+		_props = computed(_props);
+	}
+	if (isSignal(_props)) {
+		globalContext.addReactivity(() => {
+			setProps(node, _props.get());
+		});
+		return;
+	}
+
+	props = getValidProps(_props);
+
 	if (node instanceof HTMLElement) {
-		if (props.style !== undefined) {
-			const style = props.style;
-			for (const styleKey in style) {
-				let styleValue = style[styleKey]!;
-				if (typeof styleValue === 'function') {
-					styleValue = computed(styleValue);
-				}
-				if (isSignal(styleValue)) {
-					globalContext.addReactivity(() => {
-						node.style[styleKey] = styleValue.get();
-					});
-				} else {
-					node.style[styleKey] = styleValue;
-				}
-			}
-			delete props.style;
-		}
-
-		if (props.addClass !== undefined) {
-			let addClass = props.addClass;
-			let prevClass: string | null = null;
-
-			if (typeof addClass === 'function') {
-				addClass = computed(addClass);
-			}
-
-			if (isSignal(addClass)) {
-				globalContext.addReactivity(() => {
-					const cls = addClass.get();
-					if (cls !== prevClass) {
-						if (prevClass) {
-							node.classList.remove(prevClass);
-						}
-						node.classList.add(cls);
-					}
-					prevClass = cls;
-				});
-			} else {
-				node.classList.add(addClass);
-			}
-			delete props.addClass;
-		}
-
-		if (props.classes !== undefined) {
-			const classes = props.classes;
-			for (const className in classes) {
-				let apply = classes[className];
-				if (typeof apply === 'function') {
-					apply = computed(apply);
-				}
-				if (isSignal(apply)) {
-					globalContext.addReactivity(() => {
-						if (apply.get()) {
-							node.classList.add(className);
-						} else {
-							node.classList.remove(className);
-						}
-					});
-				} else {
-					if (classes[className]) {
-						node.classList.add(className);
-					} else {
-						node.classList.remove(className);
-					}
-				}
-			}
-			delete props.classes;
-		}
-
-		if (props.dataset !== undefined) {
-			const dataset = props.dataset;
-			for (const datasetKey in dataset) {
-				let ds = dataset[datasetKey];
-				if (typeof ds === 'function') {
-					ds = computed(ds);
-				}
-				if (isSignal(ds)) {
-					globalContext.addReactivity(() => {
-						node.dataset[datasetKey] = ds.get();
-					});
-				} else {
-					node.dataset[datasetKey] = ds;
-				}
-			}
-			delete props.dataset;
-		}
+		setSpecialProps(node, props);
 	}
 
 	for (const prop in props) {
@@ -171,6 +102,95 @@ export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPro
 		} else {
 			(node as any)[prop] = propValue;
 		}
+	}
+}
+
+function setSpecialProps<T extends HTMLElement>(node: T, props: INodeBuilderSpecialProps) {
+	if (props.style !== undefined) {
+		const style = props.style;
+		for (const styleKey in style) {
+			let styleValue = style[styleKey]!;
+			if (typeof styleValue === 'function') {
+				styleValue = computed(styleValue);
+			}
+			if (isSignal(styleValue)) {
+				globalContext.addReactivity(() => {
+					node.style[styleKey] = styleValue.get();
+				});
+			} else {
+				node.style[styleKey] = styleValue;
+			}
+		}
+		delete props.style;
+	}
+
+	if (props.addClass !== undefined) {
+		let addClass = props.addClass;
+		let prevClass: string | null = null;
+
+		if (typeof addClass === 'function') {
+			addClass = computed(addClass);
+		}
+
+		if (isSignal(addClass)) {
+			globalContext.addReactivity(() => {
+				const cls = addClass.get();
+				if (cls !== prevClass) {
+					if (prevClass) {
+						node.classList.remove(prevClass);
+					}
+					node.classList.add(cls);
+				}
+				prevClass = cls;
+			});
+		} else {
+			node.classList.add(addClass);
+		}
+		delete props.addClass;
+	}
+
+	if (props.classes !== undefined) {
+		const classes = props.classes;
+		for (const className in classes) {
+			let apply = classes[className];
+			if (typeof apply === 'function') {
+				apply = computed(apply);
+			}
+			if (isSignal(apply)) {
+				globalContext.addReactivity(() => {
+					if (apply.get()) {
+						node.classList.add(className);
+					} else {
+						node.classList.remove(className);
+					}
+				});
+			} else {
+				if (classes[className]) {
+					node.classList.add(className);
+				} else {
+					node.classList.remove(className);
+				}
+			}
+		}
+		delete props.classes;
+	}
+
+	if (props.dataset !== undefined) {
+		const dataset = props.dataset;
+		for (const datasetKey in dataset) {
+			let ds = dataset[datasetKey];
+			if (typeof ds === 'function') {
+				ds = computed(ds);
+			}
+			if (isSignal(ds)) {
+				globalContext.addReactivity(() => {
+					node.dataset[datasetKey] = ds.get();
+				});
+			} else {
+				node.dataset[datasetKey] = ds;
+			}
+		}
+		delete props.dataset;
 	}
 }
 
