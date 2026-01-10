@@ -8,7 +8,7 @@ export const MyApp = component(() => {
 	const linksData = [
 		{ to: '/', inner: 'Inicio' },
 		{ to: '/table', inner: 'Tabla Demo' },
-		{ to: '/form', inner: 'Formulario Demosv' },
+		{ to: '/form', inner: 'Formulario Demos' },
 	];
 
 	// Al usar datos estaticos, podemos crear una lista de componentes Link sin necesidad de

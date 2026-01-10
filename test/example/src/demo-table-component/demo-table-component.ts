@@ -53,8 +53,13 @@ const MyList = componentList<IDemoItem, { citySuffix: Signal<string> }>(
 	(item) => item.id
 );
 
+const SpecialItem = component(() => {
+	return tpl.specialItem({});
+});
+
 export const DemoTable = component((props) => {
 	const showTable = signal(true);
+	const showSpecialList = signal(true);
 	const citySuffix = signal(' 🌆');
 
 	const list = signal<IDemoItem[]>([
@@ -90,5 +95,11 @@ export const DemoTable = component((props) => {
 				showTable.update((v) => !v);
 			},
 		},
+		toggleSpecialListBtn: {
+			onclick: () => {
+				showSpecialList.update((v) => !v);
+			},
+		},
+		specialList: { inner: () => (showSpecialList.get() ? ['TEST', SpecialItem()] : '-') },
 	});
 });

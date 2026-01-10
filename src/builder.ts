@@ -4,7 +4,7 @@ import { computed, isSignal, type Signal } from './signals';
 
 export type ChispaReactive<T> = T | Signal<T> | (() => T);
 export type ChispaNode = string | number | Node | null;
-export type ChispaContent = ChispaNode | ChispaNode[] | Component | Component[] | ComponentList;
+export type ChispaContent = ChispaNode | Component | (ChispaNode | Component)[] | ComponentList;
 export type ChispaContentReactive = ChispaReactive<ChispaContent>;
 export type ChispaClasses = Record<string, ChispaReactive<boolean>>;
 export type ChispaCSSPropertiesStrings = {
@@ -217,14 +217,14 @@ export function appendChild(node: Element | DocumentFragment, child: ChispaConte
 	node.appendChild(child instanceof Node ? child : document.createTextNode(child.toString()));
 }
 
-function isStaticArrayOfComponents(arr: ChispaContent): arr is Component[] {
+function isStaticArrayWithComponents(arr: ChispaContent): arr is (Component | ChispaNode)[] {
 	if (!Array.isArray(arr)) return false;
 	for (const item of arr) {
-		if (!(item instanceof Component)) {
-			return false;
+		if (item instanceof Component) {
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 function processSignalChild(node: Element | DocumentFragment, child: Signal<ChispaContent>) {
@@ -244,8 +244,15 @@ function processSignalChild(node: Element | DocumentFragment, child: Signal<Chis
 		}
 
 		let component: Component | ComponentList;
-		if (isStaticArrayOfComponents(ch)) {
-			throw new Error('Static array of components not supported in signal children. Use ComponentList instead.');
+		if (isStaticArrayWithComponents(ch)) {
+			component = new Component(() => {
+				const frag = document.createDocumentFragment();
+				for (const c of ch) {
+					appendChild(frag, c);
+				}
+				return frag;
+			});
+			component.mount(node, anchor);
 		} else if (ch instanceof Component || ch instanceof ComponentList) {
 			ch.mount(node, anchor);
 			component = ch;
