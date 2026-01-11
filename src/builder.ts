@@ -65,9 +65,11 @@ export function getItem<T>(template: T, items: any, itemName: keyof T) {
 
 export function setAttributes(node: Element, attributes: Record<string, string>) {
 	for (const attr in attributes) {
-		const attrValue = attributes[attr].trim();
-		if (!attrValue) continue;
-		//console.log('setting attr', attr, attrValue )
+		const attrValue = attributes[attr];
+		if (attrValue === undefined || attrValue === null) {
+			node.removeAttribute(attr);
+			continue;
+		}
 		node.setAttribute(attr, attrValue);
 	}
 }

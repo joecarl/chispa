@@ -36,7 +36,7 @@ abstract class Signal<T> {
 	}
 
 	dispose() {
-		console.log('disposing signal', this);
+		//console.log('disposing signal', this);
 		this.contexts.forEach((ctx) => {
 			ctx.removeSignal(this);
 		});
