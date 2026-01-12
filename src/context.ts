@@ -1,4 +1,5 @@
 import { Component, ComponentList } from './components';
+import { ChispaDebugConfig } from './config';
 import { Signal } from './signals';
 
 type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity';
@@ -133,7 +134,9 @@ export class Reactivity implements IDisposable {
 		if (currentComponent) {
 			currentComponent.addDisposable(this);
 		} else {
-			console.warn('Creating a Reactivity outside of a component');
+			if (ChispaDebugConfig.enableReactivityWarnings) {
+				console.warn('Creating a Reactivity outside of a component');
+			}
 		}
 	}
 

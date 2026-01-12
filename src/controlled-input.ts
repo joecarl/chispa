@@ -18,6 +18,7 @@ export interface ControlledInputOptions {
 export interface SelectOption {
 	value: string;
 	label: string;
+	disabled?: boolean;
 }
 
 export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElement, signal: WritableSignal<string>, options: ControlledInputOptions = {}) {
@@ -95,6 +96,9 @@ export function bindControlledSelect(element: HTMLSelectElement, signal: Writabl
 			const optElement = document.createElement('option');
 			optElement.value = option.value;
 			optElement.textContent = option.label;
+			if (option.disabled) {
+				optElement.disabled = true;
+			}
 			element.appendChild(optElement);
 		});
 		// Ensure the current value is set

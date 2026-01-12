@@ -8,3 +8,4 @@ export type { SelectOption } from './controlled-input';
 export { bindControlledInput, bindControlledSelect } from './controlled-input';
 export { Router, Link, navigate, pathMatches } from './router';
 export type { Route, LinkProps } from './router';
+export { ChispaDebugConfig } from './config';

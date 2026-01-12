@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { globalContext } from '../src/context';
+import { ChispaDebugConfig } from '../src/config';
 
 describe('AppContext.scheduleRefresh', () => {
 	beforeEach(() => {
@@ -21,6 +22,8 @@ describe('AppContext.scheduleRefresh', () => {
 		const original = globalContext.maxScheduleIterations;
 		globalContext.maxScheduleIterations = 5;
 
+		ChispaDebugConfig.enableReactivityWarnings = true;
+
 		let count = 0;
 		// This reactivity will re-mark itself dirty every time it runs, forcing
 		// the scheduleRefresh loop to iterate repeatedly.
@@ -31,6 +34,8 @@ describe('AppContext.scheduleRefresh', () => {
 				ctx.markDirty();
 			}
 		});
+
+		ChispaDebugConfig.enableReactivityWarnings = false;
 
 		await vi.runOnlyPendingTimersAsync();
 
