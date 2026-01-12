@@ -86,6 +86,50 @@ export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElem
 	};
 }
 
+export function bindControlledCheckbox(element: HTMLInputElement, signal: WritableSignal<boolean>, indeterminate?: Signal<boolean>) {
+	// Initialize checked state
+	element.checked = signal.initialValue;
+
+	// Handle change events
+	const handleChange = (e: Event) => {
+		const target = e.target as HTMLInputElement;
+		let newChecked = target.checked;
+		const originalValue = signal.get();
+
+		// Update signal
+		if (newChecked !== originalValue) {
+			signal.set(newChecked);
+		}
+
+		// Force update DOM if it doesn't match the new value
+		if (target.checked !== newChecked) {
+			target.checked = newChecked;
+		}
+	};
+
+	element.addEventListener('change', handleChange);
+
+	// Subscribe to signal changes to update the checkbox if it changes externally
+	globalContext.addReactivity(() => {
+		const newValue = signal.get();
+		if (element.checked !== newValue) {
+			element.checked = newValue;
+		}
+	});
+
+	// Subscribe to indeterminate signal if provided as a Signal
+	if (indeterminate) {
+		globalContext.addReactivity(() => {
+			element.indeterminate = indeterminate.get();
+		});
+	}
+
+	// Return a cleanup function
+	return () => {
+		element.removeEventListener('change', handleChange);
+	};
+}
+
 export function bindControlledSelect(element: HTMLSelectElement, signal: WritableSignal<string>, optionsSignal?: Signal<SelectOption[]>) {
 	// Function to update options
 	const updateOptions = (options: SelectOption[]) => {

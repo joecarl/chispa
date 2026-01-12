@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { bindControlledInput, bindControlledSelect, SelectOption } from '../src/controlled-input';
+import { bindControlledInput, bindControlledSelect, bindControlledCheckbox, SelectOption } from '../src/controlled-input';
 import { signal } from '../src/signals';
 
 describe('Controlled Inputs', () => {
@@ -127,6 +127,41 @@ describe('Controlled Inputs', () => {
 			expect(select.children.length).toBe(3);
 			expect((select.children[0] as HTMLOptionElement).value).toBe('c');
 			expect(select.value).toBe(''); // value resets if not in new options
+
+			cleanup();
+		});
+	});
+
+	describe('bindControlledCheckbox', () => {
+		it('should bind checkbox to signal', async () => {
+			const checkbox = document.createElement('input');
+			checkbox.type = 'checkbox';
+			document.body.appendChild(checkbox);
+			const valueSignal = signal(false);
+
+			const cleanup = bindControlledCheckbox(checkbox, valueSignal);
+			expect(checkbox.checked).toBe(false);
+
+			checkbox.checked = true;
+			checkbox.dispatchEvent(new Event('change'));
+			await vi.runOnlyPendingTimersAsync();
+			expect(valueSignal.get()).toBe(true);
+
+			valueSignal.set(false);
+			await vi.runOnlyPendingTimersAsync();
+			expect(checkbox.checked).toBe(false);
+
+			cleanup();
+		});
+
+		it('should respect indeterminate option', async () => {
+			const checkbox = document.createElement('input');
+			checkbox.type = 'checkbox';
+			document.body.appendChild(checkbox);
+			const valueSignal = signal(false);
+
+			const cleanup = bindControlledCheckbox(checkbox, valueSignal, signal(true));
+			expect(checkbox.indeterminate).toBe(true);
 
 			cleanup();
 		});
