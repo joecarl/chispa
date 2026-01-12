@@ -101,14 +101,6 @@ export function bindControlledSelect(element: HTMLSelectElement, signal: Writabl
 		element.value = signal.get();
 	};
 
-	// Initialize options if provided
-	if (optionsSignal) {
-		updateOptions(optionsSignal.get());
-	}
-
-	// Initialize value
-	element.value = signal.initialValue;
-
 	// Handle change events
 	const handleChange = (e: Event) => {
 		const target = e.target as HTMLSelectElement;
@@ -126,7 +118,12 @@ export function bindControlledSelect(element: HTMLSelectElement, signal: Writabl
 		}
 	};
 
-	element.addEventListener('change', handleChange);
+	// Subscribe to options signal changes if provided
+	if (optionsSignal) {
+		globalContext.addReactivity(() => {
+			updateOptions(optionsSignal.get());
+		});
+	}
 
 	// Subscribe to signal changes to update the select if it changes externally
 	globalContext.addReactivity(() => {
@@ -137,12 +134,7 @@ export function bindControlledSelect(element: HTMLSelectElement, signal: Writabl
 		}
 	});
 
-	// Subscribe to options signal changes if provided
-	if (optionsSignal) {
-		globalContext.addReactivity(() => {
-			updateOptions(optionsSignal.get());
-		});
-	}
+	element.addEventListener('change', handleChange);
 
 	// Return a cleanup function
 	return () => {
