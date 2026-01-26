@@ -119,12 +119,14 @@ export class HtmlCompiler {
 				const currComp = this.stack[0];
 				element.removeAttribute('data-cb');
 				cbid = HtmlCompiler.camelize(cbid);
-
-				if (!this.componentsItems[currComp]) {
-					this.componentsItems[currComp] = [];
+				// Pushear a todos los padres
+				for (const comp of this.stack) {
+					if (!this.componentsItems[comp]) {
+						this.componentsItems[comp] = [];
+					}
+					this.componentsItems[comp].push(cbid);
 				}
 
-				this.componentsItems[currComp].push(cbid);
 				this.stack.unshift(cbid);
 				this.components[cbid] = this.buildTsForNode(element, true);
 				this.componentsTags[cbid] = element.tagName;

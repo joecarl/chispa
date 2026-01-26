@@ -46,21 +46,36 @@ export function getValidProps<T>(props: ChispaNodeBuilderProps<T, any>) {
 	return finalProps as ChispaNodeBuilderProps<T, any>;
 }
 
+const itemsStack: any[] = [];
+function findItemInStack(itemName: string): any {
+	for (const itemsDefs of itemsStack) {
+		if (itemsDefs && itemsDefs[itemName]) {
+			return itemsDefs[itemName];
+		}
+	}
+	return null;
+}
+
 export function getItem<T>(template: T, items: any, itemName: keyof T) {
-	if (!items || !items[itemName]) {
+	itemsStack.unshift(items);
+	const item: any = findItemInStack(itemName as string);
+
+	if (!item) {
+		itemsStack.shift();
 		return null;
 	}
 
-	const item = items[itemName];
-
+	let res;
 	if (item.constructor && item.constructor.name === 'Object' && !(item instanceof Element)) {
 		const Comp = template[itemName] as (props: any) => Element;
 		const itemProps = item;
 
-		return Comp(itemProps);
+		res = Comp(itemProps);
 	} else {
-		return item;
+		res = item;
 	}
+	itemsStack.shift();
+	return res;
 }
 
 export function setAttributes(node: Element, attributes: Record<string, string>) {

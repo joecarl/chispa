@@ -32,10 +32,10 @@ Esto permite importar archivos `.html` directamente en tus archivos `.ts`.
 
 El estado en Chispa se maneja mediante señales.
 
--   **`signal(initialValue)`**: Crea una señal de escritura.
--   **`computed(fn)`**: Crea una señal de solo lectura que depende de otras señales.
--   **`.get()`**: Obtiene el valor actual (registra la dependencia si se llama dentro de un contexto reactivo).
--   **`.update(fn)`**: Actualiza el valor de una señal.
+- **`signal(initialValue)`**: Crea una señal de escritura.
+- **`computed(fn)`**: Crea una señal de solo lectura que depende de otras señales.
+- **`.get()`**: Obtiene el valor actual (registra la dependencia si se llama dentro de un contexto reactivo).
+- **`.update(fn)`**: Actualiza el valor de una señal.
 
 ```typescript
 import { signal, computed } from 'chispa';
@@ -78,8 +78,8 @@ Chispa separa la estructura (HTML) de la lógica (TS). En tus archivos HTML, uti
 
 El compilador generará un objeto `tpl` donde cada `data-cb` se convierte en una función constructora (camelCase).
 
--   `data-cb="my-text"` -> `tpl.myText(...)`
--   `data-cb="my-button"` -> `tpl.myButton(...)`
+- `data-cb="my-text"` -> `tpl.myText(...)`
+- `data-cb="my-button"` -> `tpl.myButton(...)`
 
 ### El constructor `tpl.fragment`
 
@@ -104,10 +104,10 @@ A menos que necesites renderizar solo una parte específica de la plantilla porq
 
 Puedes enlazar señales o valores estáticos a las propiedades de los elementos DOM.
 
--   **`inner`**: Controla el contenido (texto o hijos).
--   **`style`**: Objeto con estilos CSS.
--   **`classes`**: Objeto para clases condicionales `{ 'active': isActiveSignal }`.
--   **Eventos**: `onclick`, `oninput`, etc.
+- **`inner`**: Controla el contenido (texto o hijos).
+- **`style`**: Objeto con estilos CSS.
+- **`classes`**: Objeto para clases condicionales `{ 'active': isActiveSignal }`.
+- **Eventos**: `onclick`, `oninput`, etc.
 
 ```typescript
 import { component, signal } from 'chispa';
@@ -183,56 +183,6 @@ tpl.card({
 		title: { inner: 'Hola Mundo' },
 		content: { inner: 'Descripción...' },
 	},
-});
-```
-
-## Estructura de Componentes y `data-cb`
-
-Es crucial mantener la correspondencia jerárquica entre los elementos HTML definidos con `data-cb` y la estructura del objeto pasado a `tpl.fragment` (o funciones similares).
-
-### Regla de Anidamiento
-
-Si un elemento HTML con `data-cb` es hijo de otro elemento con `data-cb`, esta relación debe reflejarse en el código TypeScript utilizando la propiedad `nodes`.
-
-**Ejemplo HTML:**
-
-```html
-<div data-cb="modal">
-	<form data-cb="formulario">
-		<button data-cb="botonCancelar">Cancelar</button>
-	</form>
-</div>
-```
-
-**Código TypeScript Incorrecto (Plano):**
-
-```typescript
-// ESTO ES INCORRECTO si los elementos están anidados en el HTML
-return tpl.fragment({
-    modal: { ... },
-    formulario: { ... },
-    botonCancelar: { ... }
-});
-```
-
-**Código TypeScript Correcto (Anidado):**
-
-```typescript
-return tpl.fragment({
-    modal: {
-        // Propiedades del modal (style, etc.)
-        nodes: {
-            formulario: {
-                // Propiedades del formulario (onsubmit, etc.)
-                nodes: {
-                    botonCancelar: {
-                        // Propiedades del botón (onclick, etc.)
-                        onclick: () => { ... }
-                    }
-                }
-            }
-        }
-    }
 });
 ```
 
