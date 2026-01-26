@@ -1,3 +1,4 @@
+import { createLogger } from 'vite';
 import { Component, ComponentList } from './components';
 import { globalContext } from './context';
 import { computed, isSignal, type Signal } from './signals';
@@ -15,7 +16,7 @@ type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
 
 type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
 interface INodeBuilderSpecialProps {
-	addClass?: ChispaReactive<string>;
+	addClass?: ChispaReactive<string | string[]>;
 	classes?: ChispaClasses;
 	style?: ChispaCSSPropertiesStrings;
 	dataset?: Record<string, ChispaReactive<string>>;
@@ -122,6 +123,11 @@ export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPro
 	}
 }
 
+function parseAddClassProp(value: string | string[]): string[] {
+	const arr = typeof value === 'string' ? value.split(' ') : value;
+	return arr.filter((c) => c.trim() !== '');
+}
+
 function setSpecialProps<T extends HTMLElement>(node: T, props: INodeBuilderSpecialProps) {
 	if (props.style !== undefined) {
 		const style = props.style;
@@ -143,7 +149,7 @@ function setSpecialProps<T extends HTMLElement>(node: T, props: INodeBuilderSpec
 
 	if (props.addClass !== undefined) {
 		let addClass = props.addClass;
-		let prevClass: string | null = null;
+		let prevClass: string[] | null = null;
 
 		if (typeof addClass === 'function') {
 			addClass = computed(addClass);
@@ -151,17 +157,15 @@ function setSpecialProps<T extends HTMLElement>(node: T, props: INodeBuilderSpec
 
 		if (isSignal(addClass)) {
 			globalContext.addReactivity(() => {
-				const cls = addClass.get();
-				if (cls !== prevClass) {
-					if (prevClass) {
-						node.classList.remove(prevClass);
-					}
-					node.classList.add(cls);
-				}
-				prevClass = cls;
+				const classes = parseAddClassProp(addClass.get());
+				const classesToRemove = prevClass ? prevClass.filter((c) => !classes.includes(c)) : [];
+				node.classList.remove(...classesToRemove);
+				node.classList.add(...classes);
+				prevClass = classes;
 			});
 		} else {
-			node.classList.add(addClass);
+			const toAdd = parseAddClassProp(addClass);
+			node.classList.add(...toAdd);
 		}
 		delete props.addClass;
 	}

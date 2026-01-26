@@ -39,6 +39,78 @@ describe('Builder Props: addClass and classes', () => {
 			setProps(div, { addClass: () => 'func-class' });
 			expect(div.classList.contains('func-class')).toBe(true);
 		});
+
+		it('should add multiple classes from a static string', () => {
+			const div = document.createElement('div');
+			setProps(div, { addClass: 'class1 class2 class3' });
+			expect(div.classList.contains('class1')).toBe(true);
+			expect(div.classList.contains('class2')).toBe(true);
+			expect(div.classList.contains('class3')).toBe(true);
+		});
+
+		it('should add multiple classes from a static array', () => {
+			const div = document.createElement('div');
+			setProps(div, { addClass: ['class-a', 'class-b'] });
+			expect(div.classList.contains('class-a')).toBe(true);
+			expect(div.classList.contains('class-b')).toBe(true);
+		});
+
+		it('should handle signal with multiple classes in string', async () => {
+			const div = document.createElement('div');
+			const classSignal = signal('c1 c2');
+			setProps(div, { addClass: classSignal });
+			expect(div.classList.contains('c1')).toBe(true);
+			expect(div.classList.contains('c2')).toBe(true);
+
+			classSignal.set('c2 c3');
+			await vi.runOnlyPendingTimersAsync();
+			expect(div.classList.contains('c1')).toBe(false);
+			expect(div.classList.contains('c2')).toBe(true);
+			expect(div.classList.contains('c3')).toBe(true);
+		});
+
+		it('should handle signal with array of classes', async () => {
+			const div = document.createElement('div');
+			const classSignal = signal(['arr1', 'arr2']);
+			setProps(div, { addClass: classSignal as any });
+			expect(div.classList.contains('arr1')).toBe(true);
+			expect(div.classList.contains('arr2')).toBe(true);
+
+			classSignal.set(['arr2', 'arr3']);
+			await vi.runOnlyPendingTimersAsync();
+			expect(div.classList.contains('arr1')).toBe(false);
+			expect(div.classList.contains('arr2')).toBe(true);
+			expect(div.classList.contains('arr3')).toBe(true);
+		});
+
+		it('should handle empty value in signal', async () => {
+			const div = document.createElement('div');
+			const classSignal = signal<string | string[]>('initial');
+			setProps(div, { addClass: classSignal });
+			expect(div.classList.contains('initial')).toBe(true);
+
+			classSignal.set('');
+			await vi.runOnlyPendingTimersAsync();
+			expect(div.className).toBe('');
+
+			classSignal.set(['a', 'b']);
+			await vi.runOnlyPendingTimersAsync();
+			expect(div.classList.contains('a')).toBe(true);
+			expect(div.classList.contains('b')).toBe(true);
+
+			classSignal.set([]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(div.className).toBe('');
+		});
+
+		it('should play well with className prop', () => {
+			const div = document.createElement('div');
+			div.className = 'base';
+			setProps(div, { addClass: 'extra' });
+
+			expect(div.classList.contains('base')).toBe(true);
+			expect(div.classList.contains('extra')).toBe(true);
+		});
 	});
 
 	describe('classes prop', () => {
