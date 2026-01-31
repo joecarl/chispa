@@ -29,6 +29,7 @@ interface TypeConverter<T extends InputValueType> {
 }
 
 function getTypeConverter<T extends InputValueType>(exampleValue: T): TypeConverter<T> {
+	// TODO: Extend for other types if needed. Also support partial parsing/formatting with invalid intermediate states (e.g. for dates or decimals)
 	if (typeof exampleValue === 'number') {
 		return {
 			toTargetType: (val: string) => Number(val) as T,
