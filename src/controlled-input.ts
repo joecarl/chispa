@@ -1,18 +1,18 @@
 import { globalContext } from './context';
 import { Signal, WritableSignal } from './signals';
 
-export interface ControlledInputOptions {
+export interface ControlledInputOptions<T> {
 	/**
 	 * Optional function to transform the value before setting it to the signal.
 	 * Useful for enforcing uppercase, removing invalid characters, etc.
 	 */
-	transform?: (value: string) => string;
+	transform?: (value: T) => T;
 
 	/**
 	 * Optional function to validate the value.
 	 * If it returns false, the change is rejected and the previous value is restored.
 	 */
-	validate?: (value: string) => boolean;
+	validate?: (value: T) => boolean;
 }
 
 export interface SelectOption {
@@ -21,16 +21,44 @@ export interface SelectOption {
 	disabled?: boolean;
 }
 
-export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElement, signal: WritableSignal<string>, options: ControlledInputOptions = {}) {
+type InputValueType = string | number;
+
+interface TypeConverter<T extends InputValueType> {
+	toTargetType: (val: string) => T;
+	fromTargetType: (val: T) => string;
+}
+
+function getTypeConverter<T extends InputValueType>(exampleValue: T): TypeConverter<T> {
+	if (typeof exampleValue === 'number') {
+		return {
+			toTargetType: (val: string) => Number(val) as T,
+			fromTargetType: (val: T) => val.toString(),
+		} as const;
+	} else {
+		return {
+			toTargetType: (val: string) => val as T,
+			fromTargetType: (val: T) => val as string,
+		} as const;
+	}
+}
+
+export function bindControlledInput<T extends InputValueType>(
+	element: HTMLInputElement | HTMLTextAreaElement,
+	signal: WritableSignal<T>,
+	options: ControlledInputOptions<T> = {}
+) {
 	const { transform, validate } = options;
 
+	// Get type converters based on the initial value type
+	const { toTargetType, fromTargetType } = getTypeConverter(signal.initialValue);
+
 	// Initialize value
-	element.value = signal.initialValue;
+	element.value = fromTargetType(signal.initialValue);
 
 	// Handle input events
 	const handleInput = (e: Event) => {
 		const target = e.target as HTMLInputElement;
-		let newValue = target.value;
+		let newValue = toTargetType(target.value);
 		const originalValue = signal.get();
 
 		// Save cursor position
@@ -54,9 +82,10 @@ export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElem
 		}
 
 		// Force update DOM if it doesn't match the new value (e.g. transformed or rejected)
-		if (target.value !== newValue) {
-			const lengthDiff = target.value.length - newValue.length;
-			target.value = newValue;
+		const newValueStr = fromTargetType(newValue);
+		if (target.value !== newValueStr) {
+			const lengthDiff = target.value.length - newValueStr.length;
+			target.value = newValueStr;
 
 			// Restore cursor
 			if (selectionStart !== null && selectionEnd !== null) {
@@ -73,10 +102,10 @@ export function bindControlledInput(element: HTMLInputElement | HTMLTextAreaElem
 
 	// Subscribe to signal changes to update the input if it changes externally
 	globalContext.addReactivity(() => {
-		const newValue = signal.get();
+		const newValueStr = fromTargetType(signal.get());
 		// Only update if the value is actually different to avoid cursor jumping
-		if (element.value !== newValue) {
-			element.value = newValue;
+		if (element.value !== newValueStr) {
+			element.value = newValueStr;
 		}
 	});
 
