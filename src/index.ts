@@ -2,6 +2,7 @@ export type { Signal, WritableSignal } from './signals';
 export { isSignal, isWriteableSignal, computed, signal, effect } from './signals';
 export { globalContext } from './context';
 export { component, onUnmount, componentList } from './components';
+export type { Component, ComponentList, ComponentFactory } from './components';
 export { appendChild, getItem, getValidProps, setAttributes, setProps } from './builder';
 export type { ChispaReactive, ChispaContent, ChispaContentReactive, ChispaNodeBuilderProps, ChispaNodeBuilderPropsReactive } from './builder';
 export type { SelectOption } from './controlled-input';
