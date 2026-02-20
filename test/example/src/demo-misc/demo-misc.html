@@ -1,0 +1,26 @@
+<div>
+	<input data-cb="inp" type="text" placeholder="Escribe algo..." class="form-control" />
+	<button data-cb="btn">Botón</button>
+	<small>El botón se deshabilitará si escribes "deshabilitar".</small>
+
+	<div class="info-box" style="margin-top: 1em;">
+		<h3>Novedades v0.9.0</h3>
+		<p>A partir de la versión <strong>0.9.0</strong>, Chispa introduce mejoras significativas en la reactividad
+			de las propiedades:</p>
+
+		<h4>Propiedades reactivas automáticas</h4>
+		<p>Ya no es necesario envolver funciones en <code>computed()</code> al asignarlas a propiedades estándar de
+			nodos HTML. Chispa las envuelve internamente por ti.</p>
+
+		<pre><code>// Antes:
+disabled: computed(() => value.get().toLowerCase() === 'deshabilitar')
+
+// Ahora (v0.9.0):
+disabled: () => value.get().toLowerCase() === 'deshabilitar'</code></pre>
+
+		<h4>Eventos (Callbacks)</h4>
+		<p>Las propiedades de tipo evento (como <code>onclick</code>) ahora solo aceptan funciones directamente. Al
+			trabajar con <i>signals</i>, no es necesario redefinir los callbacks ante cambios de estado, a diferencia
+			de otros frameworks.</p>
+	</div>
+</div>

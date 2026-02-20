@@ -1,4 +1,3 @@
-import { createLogger } from 'vite';
 import { Component, ComponentList } from './components';
 import { globalContext } from './context';
 import { computed, isSignal, type Signal } from './signals';
@@ -12,9 +11,10 @@ export type ChispaCSSPropertiesStrings = {
 	[K in keyof CSSStyleDeclaration]?: ChispaReactive<string>;
 };
 
-type AllowSignals<T> = { [K in keyof T]: T[K] | Signal<T[K]> };
+type EventPropKeys<T> = Extract<keyof T, `on${string}`>;
+type AllowSignals<T> = { [K in keyof T]: ChispaReactive<T[K]> };
 
-type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<Partial<T>, 'style' | 'dataset'>>;
+type ChispaNodeBuilderBaseProps<T> = AllowSignals<Omit<T, 'style' | 'dataset' | EventPropKeys<T>>> & Pick<T, EventPropKeys<T>>;
 interface INodeBuilderSpecialProps {
 	addClass?: ChispaReactive<string | string[]>;
 	classes?: ChispaClasses;
@@ -26,7 +26,7 @@ interface INodeBuilderAdditionalProps<T, TNodes> {
 	inner?: ChispaContentReactive;
 	_ref?: (node: T) => void | { current: T | null };
 }
-export type ChispaNodeBuilderProps<T, TNodes> = ChispaNodeBuilderBaseProps<T> & INodeBuilderAdditionalProps<T, TNodes> & INodeBuilderSpecialProps;
+export type ChispaNodeBuilderProps<T, TNodes> = Partial<ChispaNodeBuilderBaseProps<T>> & INodeBuilderAdditionalProps<T, TNodes> & INodeBuilderSpecialProps;
 export type ChispaNodeBuilderPropsReactive<T, TNodes> = ChispaReactive<ChispaNodeBuilderProps<T, TNodes>>;
 
 const forbiddenProps = ['nodes', 'inner', '_ref'];
@@ -90,6 +90,18 @@ export function setAttributes(node: Element, attributes: Record<string, string>)
 	}
 }
 
+function isEventProp(prop: string) {
+	return prop.startsWith('on');
+}
+
+function getPropValue(props: any, prop: string) {
+	const propValue = props[prop];
+	if (typeof propValue === 'function' && !isEventProp(prop)) {
+		return computed(propValue);
+	}
+	return propValue;
+}
+
 export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPropsReactive<T, any>) {
 	let _props = props;
 	if (typeof _props === 'function') {
@@ -109,7 +121,7 @@ export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPro
 	}
 
 	for (const prop in props) {
-		const propValue = (props as any)[prop];
+		const propValue = getPropValue(props, prop);
 		//console.log('setting prop', prop, propValue )
 		if (isSignal(propValue)) {
 			globalContext.addReactivity(() => {

@@ -14,7 +14,9 @@ const toVirtualId = (id: string) => '\0' + id + '.chispa.ts';
  * Convierte un ID de módulo virtual de vuelta a la ruta real del archivo.
  * Elimina el prefijo `\0` (si existe) y el sufijo `.chispa.ts`.
  */
-const fromVirtualId = (id: string) => id.replace(/^\0/, '').replace('.chispa.ts', '');
+const fromVirtualId = (id: string) => id.replace(/^\0/, '').replace(/\.chispa\.ts$/, '');
+
+const CHISPA_VIRTUAL_MODULE_SUFFIX = '.html.chispa.ts';
 
 export function chispaHtmlPlugin(): Plugin {
 	let rootDir = process.cwd();
@@ -41,7 +43,7 @@ export function chispaHtmlPlugin(): Plugin {
 			}
 		},
 		async resolveId(source, importer, options) {
-			if (source.endsWith('.html.chispa.ts')) {
+			if (source.endsWith(CHISPA_VIRTUAL_MODULE_SUFFIX)) {
 				return source;
 			}
 			if (source.endsWith('.html') && importer) {
@@ -53,26 +55,27 @@ export function chispaHtmlPlugin(): Plugin {
 			return null;
 		},
 		async load(id) {
-			if (id.endsWith('.html.chispa.ts')) {
-				const realId = fromVirtualId(id);
-				try {
-					const content = fs.readFileSync(realId, 'utf-8');
-					if (content.includes('<!DOCTYPE html>') || content.includes('<html')) {
-						return 'export default {};';
-					}
+			if (!id.endsWith(CHISPA_VIRTUAL_MODULE_SUFFIX)) return null;
 
-					const compiler = new HtmlCompiler(content);
-					const { ts } = await compiler.compile();
-					generateTypes(realId, content, rootDir);
-
-					const result = await transformWithEsbuild(ts, realId, {
-						loader: 'ts',
-					});
-					return result.code;
-				} catch (e) {
-					console.error(`[chispa] Error loading ${id}:`, e);
-					throw e;
+			const realId = fromVirtualId(id);
+			this.addWatchFile(realId); // To ensure changes in the HTML file trigger a rebuild in watch mode.
+			try {
+				const content = fs.readFileSync(realId, 'utf-8');
+				if (content.includes('<!DOCTYPE html>') || content.includes('<html')) {
+					return 'export default {};';
 				}
+
+				const compiler = new HtmlCompiler(content);
+				const { ts } = await compiler.compile();
+				generateTypes(realId, content, rootDir);
+
+				const result = await transformWithEsbuild(ts, realId, {
+					loader: 'ts',
+				});
+				return result.code;
+			} catch (e) {
+				console.error(`[chispa] Error loading ${id}:`, e);
+				throw e;
 			}
 		},
 	};

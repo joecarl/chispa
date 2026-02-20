@@ -1,36 +1,37 @@
-# Chispa
+# Chispa [![npm version](https://img.shields.io/npm/v/chispa.svg?style=flat)](https://www.npmjs.com/package/chispa)
 
-Un motor UI reactivo y extremadamente minimalista.
+Un motor UI reactivo, extremadamente minimalista y sorprendentemente potente.
 
-Chispa no es un framework dogmático: es un motor ligero que expone reactividad mínima sobre DOM real, pensado para integrarse, incrustarse y usarse desde herramientas y entornos donde las capas pesadas sobran.
+Chispa nació de la frustración tras años utilizando los frameworks más populares (como React o Angular) y no encontrar ninguno que me convenciese plenamente en todos los aspectos. Se ha construido destilando lo mejor de cada uno, sumando ideas propias y eliminando sistemáticamente todo lo que sobra.
 
-**Principio**: la función del componente se ejecuta una vez; el resto es flujo de datos (signals → DOM).
+El resultado es un motor que pone el foco en la **simpleza absoluta y la limpieza del código**. No es solo un motor para pequeños módulos; tras migrar proyectos complejos a Chispa, la experiencia ha demostrado que el código resultante es mucho más legible, mantenible y libre de la "magia" impredecible de otros frameworks.
 
-**¿Para quién es chispa?**
+**Principio fundamental**: la función del componente se ejecuta una sola vez; el resto es flujo puro de datos (**signals → DOM**).
 
-- Ideal para desarrolladores que necesitan control directo del DOM y baja complejidad mental.
-- Perfecto para IDEs, plugins, paneles embebidos, dashboards y UIs que requieren integración con código legado.
+## ¿Por qué elegir Chispa?
 
-**¿Para qué NO es chispa?**
+- **Baja complejidad mental**: Olvídate de ciclos de vida opacos, re-renders infinitos o hooks con reglas complejas.
+- **Control total**: Tienes acceso directo al DOM real y a las plantillas HTML, sin las abstracciones pesadas de un Virtual DOM.
+- **Código limpio**: Al separar la estructura HTML de la lógica TS y usar señales precisas, el código se vuelve declarativo y extremadamente fácil de seguir.
+- **Rendimiento nativo**: Solo se actualiza el nodo exacto que cambia. Eficiencia máxima por diseño.
+- **HTML real**: Plantillas HTML puras importadas, sin JSX ni transformaciones mágicas.
+- **TS/JS de un solo paso**: Las funciones de componente se ejecutan una vez (setup), eliminando problemas de estado efímero en cada render.
+- **Bindings precisos signal → DOM**: Actualizaciones atómicas sin heurísticas de comparación de árboles.
+- **Motor embebible**: Sin arquitectura impuesta; perfecto tanto para aplicaciones completas como para ser incrustado en sistemas existentes.
+- **Ligero**: Sin dependencias en tiempo de ejecución.
+- **Integración con Vite**: Incluye un plugin de Vite para una experiencia de desarrollo fluida.
 
-- No pretende (de momento) sustituir un framework de aplicación completo (SSR complejo, abstracciones de estado a gran escala).
+## Crear un nuevo proyecto
 
-## Diferenciadores
+Puedes crear rápidamente un nuevo proyecto de chispa lanzando el comando:
 
-- **HTML real**: plantillas HTML importadas, sin JSX ni transformaciones mágicas.
-- **JS/TS real**: funciones de componente normales (se ejecutan una vez) y señales explícitas.
-- **Bindings directos signal → DOM**: actualizaciones precisas sin VDOM ni heurísticas.
-- **Motor embebible**: sin lifecycle complejo ni arquitectura impuesta; fácil de integrar y depurar.
+```bash
+npx create-chispa my-app
+```
 
-## Características
+## Setup manual
 
-- ⚡ **Reactividad Fina**: Basado en Signals para actualizaciones precisas y eficientes del DOM.
-- 🧩 **Componentes Funcionales**: Crea componentes reutilizables con funciones simples.
-- 📄 **Plantillas HTML**: Separa la lógica de la vista importando archivos HTML directamente.
-- 🛠️ **Integración con Vite**: Incluye un plugin de Vite para una experiencia de desarrollo fluida.
-- 📦 **Ligero**: Sin dependencias pesadas en tiempo de ejecución.
-
-## Instalación
+### Instalación
 
 Instala `chispa` en tu proyecto:
 
@@ -38,7 +39,7 @@ Instala `chispa` en tu proyecto:
 npm install chispa
 ```
 
-## Configuración (Vite)
+### Configuración (Vite)
 
 Para usar las plantillas HTML, necesitas configurar el plugin de Chispa en tu `vite.config.ts`:
 
@@ -94,12 +95,14 @@ export const MyComponent = component(() => {
 
 	// Retorna el fragmento enlazando los elementos del HTML
 	return tpl.fragment({
-		// Enlaza el contenido del span con la señal
+		// Enlaza el contenido directamente con la señal
 		countDisplay: { inner: count },
 
-		// Enlaza el evento click del botón
 		incrementBtn: {
+			// Enlaza el evento click del botón
 			onclick: () => count.update((v) => v + 1),
+			// Enlaza una propiedad con una función reactiva
+			disabled: () => count.get() >= 10,
 		},
 	});
 });
@@ -117,28 +120,6 @@ import { MyComponent } from './my-component';
 
 appendChild(document.body, MyComponent());
 ```
-
-## API Principal
-
-### Reactividad
-
-- **`signal(initialValue)`**: Crea una señal reactiva.
-
-    ```typescript
-    const count = signal(0);
-    console.log(count.get()); // Leer valor
-    count.set(5); // Establecer valor
-    ```
-
-- **`computed(() => ...)`**: Crea una señal derivada que se actualiza automáticamente cuando sus dependencias cambian.
-    ```typescript
-    const double = computed(() => count.get() * 2);
-    ```
-
-### Componentes
-
-- **`component<Props>((props) => ...)`**: Define un nuevo componente.
-- **`appendChild(parent, child)`**: Función auxiliar para montar componentes en el DOM.
 
 ## Licencia
 

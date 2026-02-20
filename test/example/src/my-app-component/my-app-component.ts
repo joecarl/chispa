@@ -2,6 +2,7 @@ import { component, Link, Router, pathMatches, signal } from 'chispa';
 import { DemoTable } from '../demo-table-component/demo-table-component';
 import { DemoForm } from '../demo-form-component/demo-form-component';
 import { DemoNested } from '../demo-nested-component/demo-nested-component';
+import { DemoMisc } from '../demo-misc/demo-misc';
 import { Home } from '../home-component/home-component';
 import tpl from './my-app-component.html';
 
@@ -11,6 +12,7 @@ export const MyApp = component(() => {
 		{ to: '/table', inner: 'Tabla Demo' },
 		{ to: '/form', inner: 'Formulario Demos' },
 		{ to: '/nested', inner: 'Componente Anidado' },
+		{ to: '/misc', inner: 'Misc' },
 	];
 
 	// Al usar datos estaticos, podemos crear una lista de componentes Link sin necesidad de
@@ -31,6 +33,7 @@ export const MyApp = component(() => {
 				{ path: '/table', component: DemoTable },
 				{ path: '/form', component: DemoForm },
 				{ path: '/nested', component: DemoNested },
+				{ path: '/misc', component: DemoMisc },
 			],
 		}),
 	});
