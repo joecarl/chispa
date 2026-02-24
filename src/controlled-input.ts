@@ -1,5 +1,7 @@
+import { appendChild, setProps } from './builder';
+import { componentList } from './components';
 import { globalContext } from './context';
-import { Signal, WritableSignal } from './signals';
+import { computed, isSignal, Signal, WritableSignal } from './signals';
 
 export interface ControlledInputOptions<T> {
 	/**
@@ -45,22 +47,22 @@ function getTypeConverter<T extends InputValueType>(exampleValue: T): TypeConver
 
 export function bindControlledInput<T extends InputValueType>(
 	element: HTMLInputElement | HTMLTextAreaElement,
-	signal: WritableSignal<T>,
+	valueSignal: WritableSignal<T>,
 	options: ControlledInputOptions<T> = {}
 ) {
 	const { transform, validate } = options;
 
 	// Get type converters based on the initial value type
-	const { toTargetType, fromTargetType } = getTypeConverter(signal.initialValue);
+	const { toTargetType, fromTargetType } = getTypeConverter(valueSignal.initialValue);
 
 	// Initialize value
-	element.value = fromTargetType(signal.initialValue);
+	element.value = fromTargetType(valueSignal.initialValue);
 
 	// Handle input events
 	const handleInput = (e: Event) => {
 		const target = e.target as HTMLInputElement;
 		let newValue = toTargetType(target.value);
-		const originalValue = signal.get();
+		const originalValue = valueSignal.get();
 
 		// Save cursor position
 		const selectionStart = target.selectionStart;
@@ -79,7 +81,7 @@ export function bindControlledInput<T extends InputValueType>(
 
 		// Update signal
 		if (newValue !== originalValue) {
-			signal.set(newValue);
+			valueSignal.set(newValue);
 		}
 
 		// Force update DOM if it doesn't match the new value (e.g. transformed or rejected)
@@ -103,7 +105,7 @@ export function bindControlledInput<T extends InputValueType>(
 
 	// Subscribe to signal changes to update the input if it changes externally
 	globalContext.addReactivity(() => {
-		const newValueStr = fromTargetType(signal.get());
+		const newValueStr = fromTargetType(valueSignal.get());
 		// Only update if the value is actually different to avoid cursor jumping
 		if (element.value !== newValueStr) {
 			element.value = newValueStr;
@@ -116,19 +118,19 @@ export function bindControlledInput<T extends InputValueType>(
 	};
 }
 
-export function bindControlledCheckbox(element: HTMLInputElement, signal: WritableSignal<boolean>, indeterminate?: Signal<boolean>) {
+export function bindControlledCheckbox(element: HTMLInputElement, valueSignal: WritableSignal<boolean>, indeterminate?: Signal<boolean>) {
 	// Initialize checked state
-	element.checked = signal.initialValue;
+	element.checked = valueSignal.initialValue;
 
 	// Handle change events
 	const handleChange = (e: Event) => {
 		const target = e.target as HTMLInputElement;
 		let newChecked = target.checked;
-		const originalValue = signal.get();
+		const originalValue = valueSignal.get();
 
 		// Update signal
 		if (newChecked !== originalValue) {
-			signal.set(newChecked);
+			valueSignal.set(newChecked);
 		}
 
 		// Force update DOM if it doesn't match the new value
@@ -141,7 +143,7 @@ export function bindControlledCheckbox(element: HTMLInputElement, signal: Writab
 
 	// Subscribe to signal changes to update the checkbox if it changes externally
 	globalContext.addReactivity(() => {
-		const newValue = signal.get();
+		const newValue = valueSignal.get();
 		if (element.checked !== newValue) {
 			element.checked = newValue;
 		}
@@ -160,34 +162,29 @@ export function bindControlledCheckbox(element: HTMLInputElement, signal: Writab
 	};
 }
 
-export function bindControlledSelect(element: HTMLSelectElement, signal: WritableSignal<string>, optionsSignal?: Signal<SelectOption[]>) {
-	// Function to update options
-	const updateOptions = (options: SelectOption[]) => {
-		// Clear existing options
-		element.innerHTML = '';
-		// Add new options
-		options.forEach((option) => {
+export function bindControlledSelect(element: HTMLSelectElement, valueSignal: WritableSignal<string>, optionList?: Signal<SelectOption[]> | SelectOption[]) {
+	const Options = componentList<SelectOption>(
+		(option) => {
 			const optElement = document.createElement('option');
-			optElement.value = option.value;
-			optElement.textContent = option.label;
-			if (option.disabled) {
-				optElement.disabled = true;
-			}
-			element.appendChild(optElement);
-		});
-		// Ensure the current value is set
-		element.value = signal.get();
-	};
+			setProps(optElement, {
+				value: () => option.get().value ?? '',
+				textContent: () => option.get().label ?? '',
+				disabled: () => option.get().disabled ?? false,
+			});
+			return optElement;
+		},
+		(o) => o.value
+	);
 
 	// Handle change events
 	const handleChange = (e: Event) => {
 		const target = e.target as HTMLSelectElement;
 		let newValue = target.value;
-		const originalValue = signal.get();
+		const originalValue = valueSignal.get();
 
 		// Update signal
 		if (newValue !== originalValue) {
-			signal.set(newValue);
+			valueSignal.set(newValue);
 		}
 
 		// Force update DOM if it doesn't match the new value (e.g. transformed or rejected)
@@ -197,15 +194,25 @@ export function bindControlledSelect(element: HTMLSelectElement, signal: Writabl
 	};
 
 	// Subscribe to options signal changes if provided
-	if (optionsSignal) {
+	if (optionList) {
+		const optionsSignal = isSignal(optionList) ? optionList : computed(() => optionList || []);
+
+		element.innerHTML = '';
+		appendChild(element, Options(optionsSignal));
 		globalContext.addReactivity(() => {
-			updateOptions(optionsSignal.get());
+			const currValue = valueSignal.get();
+			// If the current value is not in the new options, reset it
+			if (!optionsSignal.get().some((opt) => opt.value === currValue)) {
+				element.value = '';
+			} else if (element.value !== currValue) {
+				element.value = currValue;
+			}
 		});
 	}
 
 	// Subscribe to signal changes to update the select if it changes externally
 	globalContext.addReactivity(() => {
-		const newValue = signal.get();
+		const newValue = valueSignal.get();
 		// Only update if the value is actually different
 		if (element.value !== newValue) {
 			element.value = newValue;

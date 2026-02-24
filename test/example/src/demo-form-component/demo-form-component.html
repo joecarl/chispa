@@ -16,3 +16,24 @@
 	<input type="text" placeholder="Input deshabilitado..." class="form-control" disabled />
 
 </div>
+
+<div style="margin-bottom: 0.5rem">
+
+	<label>Select con opciones dinámicas:</label>
+</div>
+<div class="controls-row">
+	<select data-cb="select-inp" class="form-control"></select>
+	<button data-cb="randomize-options-btn">Randomizar opciones</button>
+	<br>
+</div>
+<div>
+	<small>
+		Valor interno: <span data-cb="select-value" class="badge"></span>.
+		(Numero de opciones: <span data-cb="select-options-count" class="badge"></span>)<br>
+		El valor interno solo cambiará al seleccionar una opción, no al randomizar las opciones.
+		Esto demuestra que el select es controlado y no se resetea al cambiar las opciones.
+		En el caso de que la opción seleccionada desaparezca, el select se quedará sin selección, pero
+		el valor interno se mantiene hasta que el usuario seleccione una nueva opción.
+	</small>
+
+</div>

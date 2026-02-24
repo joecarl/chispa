@@ -35,13 +35,9 @@ export function getValidProps<T>(props: ChispaNodeBuilderProps<T, any>) {
 	const finalProps: any = {};
 
 	for (const propName in props) {
-		if (forbiddenProps.indexOf(propName) === -1) {
+		if (!forbiddenProps.includes(propName)) {
 			finalProps[propName] = props[propName as keyof typeof props];
 		}
-	}
-
-	if (props._ref !== undefined) {
-		//finalProps.ref = props._ref;
 	}
 
 	return finalProps as ChispaNodeBuilderProps<T, any>;
