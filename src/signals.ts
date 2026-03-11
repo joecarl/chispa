@@ -5,13 +5,15 @@ type WithSignals<T> = { [K in keyof T]: Signal<T[K]> };
 abstract class Signal<T> {
 	protected abstract value: T;
 
+	public abstract readonly initialValue: T;
+
 	protected contexts: Set<Reactivity> = new Set();
 
 	constructor() {}
 
 	get() {
 		if (!globalContext.canReadSignal()) {
-			throw new Error('Cannot read a signal value during component creation. Did you mean to use a computed signal instead?');
+			throw new Error('Cannot read a signal value during component creation. Consider using a computed signal or an effect instead.');
 		}
 		//context.current.register(this);
 		const ctx = globalContext.getCurrentRenderContext();
@@ -47,7 +49,7 @@ abstract class Signal<T> {
 class WritableSignal<T> extends Signal<T> {
 	protected override value: T;
 
-	public readonly initialValue: T;
+	public override readonly initialValue: T;
 
 	constructor(initialValue: T) {
 		super();
@@ -69,12 +71,15 @@ class WritableSignal<T> extends Signal<T> {
 class ComputedSignal<T> extends Signal<T> {
 	protected override value: T;
 
+	public override readonly initialValue: T;
+
 	private computeFn: () => T;
 
 	constructor(computeFn: () => T) {
 		super();
 		globalContext.pushExecutionStack('computed');
 		this.value = computeFn();
+		this.initialValue = this.value;
 		globalContext.popExecutionStack();
 		this.computeFn = computeFn;
 	}

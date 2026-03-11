@@ -118,7 +118,7 @@ export function onUnmount(unmountFn: () => void) {
 	}
 }
 
-type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: Signal<T[]>, props?: TProps) => ChispaContent;
+type ItemFactoryFn<T, TProps = any> = (item: Signal<T>, index: Signal<number>, list: Signal<T[]>, props: TProps, key: any) => ChispaContent;
 type KeyFn<T> = (item: T, index: number) => any;
 
 export class ComponentList<TItem = any, TProps extends Dict = any> {
@@ -167,10 +167,10 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	 * Crea un nuevo componente
 	 */
 	private createNewComponent(key: any): Component {
-		const factory = (props?: TProps) => {
+		const factory = (props: TProps) => {
 			const item = computed(() => this.itemsSignal.get().find((v, index) => this.keyFn(v, index) === key)!);
 			const index = computed(() => this.itemsSignal.get().findIndex((v, index) => this.keyFn(v, index) === key));
-			return this.itemFactoryFn ? this.itemFactoryFn(item, index, this.itemsSignal, props) : null;
+			return this.itemFactoryFn ? this.itemFactoryFn(item, index, this.itemsSignal, props, key) : null;
 		};
 
 		const component = new Component(factory, key, this.props);
