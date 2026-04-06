@@ -10,3 +10,4 @@ export { bindControlledInput, bindControlledSelect, bindControlledCheckbox } fro
 export { Router, Link, navigate, pathMatches } from './router';
 export type { Route, LinkProps } from './router';
 export { ChispaDebugConfig } from './config';
+export { inject, provide, resetServices, InjectionToken } from './injection';

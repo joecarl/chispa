@@ -2,7 +2,7 @@ import { Component, ComponentList } from './components';
 import { ChispaDebugConfig } from './config';
 import { Signal } from './signals';
 
-type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity';
+type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity' | 'injectSingleton';
 
 export interface IDisposable {
 	dispose: () => void;
@@ -30,6 +30,7 @@ class AppContext {
 	}
 
 	getCurrentComponent() {
+		if (this.executionStack.includes('injectSingleton')) return null;
 		if (this.componentStack.length === 0) {
 			//console.warn('No current component');
 			return null;
