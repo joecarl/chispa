@@ -1,6 +1,6 @@
 import { HtmlCompiler } from './html-compiler';
 import { generateTypes, findAndCompileHtmlFiles } from './generator';
-import { type Plugin, transformWithEsbuild } from 'vite';
+import { type Plugin, transformWithOxc } from 'vite';
 import * as fs from 'fs';
 
 /**
@@ -69,9 +69,7 @@ export function chispaHtmlPlugin(): Plugin {
 				const { ts } = await compiler.compile();
 				generateTypes(realId, content, rootDir);
 
-				const result = await transformWithEsbuild(ts, realId, {
-					loader: 'ts',
-				});
+				const result = await transformWithOxc(ts, realId + '.ts');
 				return result.code;
 			} catch (e) {
 				console.error(`[chispa] Error loading ${id}:`, e);

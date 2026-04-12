@@ -1,6 +1,6 @@
 {
 	"name": "chispa",
-	"version": "0.10.0",
+	"version": "0.10.1",
 	"description": "A fully declarative UI reactive engine for building web applications.",
 	"author": "José Carlos HR <joecarlhr@gmail.com>",
 	"license": "MIT",
@@ -28,15 +28,15 @@
 		"url": "git+https://github.com/joecarl/chispa.git"
 	},
 	"dependencies": {
-		"jsdom": "^27.4.0",
+		"jsdom": "^29.0.2",
 		"prettier": "^3.7.4"
 	},
 	"devDependencies": {
-		"@types/jsdom": "^27.0.0",
+		"@types/jsdom": "^28.0.1",
 		"tsup": "^8.5.1",
-		"typescript": "^5.9.3",
-		"vite": "^7.3.0",
-		"vitest": "^4.0.16"
+		"typescript": "^6.0.2",
+		"vite": "^8.0.8",
+		"vitest": "^4.1.4"
 	},
 	"bugs": {
 		"url": "https://github.com/joecarl/chispa/issues"
