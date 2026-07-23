@@ -102,6 +102,35 @@ describe('Controlled Inputs', () => {
 			cleanup();
 		});
 
+		it('should not crash on reload when the empty-value ("") option is removed', async () => {
+			const select = document.createElement('select');
+			document.body.appendChild(select);
+			const valueSignal = signal('');
+			const optionsSignal = signal<SelectOption[]>([
+				{ value: '', label: 'Choose...' },
+				{ value: 'a', label: 'A' },
+			]);
+
+			const cleanup = bindControlledSelect(select, valueSignal, optionsSignal);
+			await vi.runOnlyPendingTimersAsync();
+			expect(Array.from(select.children).map((c) => (c as HTMLOptionElement).value)).toEqual(['', 'a']);
+
+			// Reload: fresh list without the '' placeholder option
+			optionsSignal.set([
+				{ value: 'b', label: 'B' },
+				{ value: 'c', label: 'C' },
+			]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(Array.from(select.children).map((c) => (c as HTMLOptionElement).value)).toEqual(['b', 'c']);
+
+			// The select must keep working after that reload (shrink again)
+			optionsSignal.set([{ value: 'c', label: 'C' }]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(Array.from(select.children).map((c) => (c as HTMLOptionElement).value)).toEqual(['c']);
+
+			cleanup();
+		});
+
 		it('should update options from signal', async () => {
 			const select = document.createElement('select');
 			document.body.appendChild(select);

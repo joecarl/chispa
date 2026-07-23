@@ -158,9 +158,8 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	 */
 	private removeComponent(component: Component) {
 		component.unmount();
-		if (component.key) {
-			this.components.delete(component.key);
-		}
+		// Keys can be falsy ('', 0, false), so no truthiness check here
+		this.components.delete(component.key);
 	}
 
 	/**
@@ -199,7 +198,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 		// Identificar qué componentes eliminar (los que no están en keys)
 		const items = this.itemsSignal.get();
 		const keys = items.map((item, index) => this.keyFn(item, index));
-		const componentsToRemove = existingComponents.filter((component) => component.key && !keys.includes(component.key));
+		const componentsToRemove = existingComponents.filter((component) => !keys.includes(component.key));
 		componentsToRemove.forEach((component) => this.removeComponent(component));
 
 		this.currentKeys = this.currentKeys.filter((key) => keys.includes(key));

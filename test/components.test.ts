@@ -150,6 +150,33 @@ describe('Component Creation, Mounting, and Unmounting', () => {
 		expect(container.innerHTML).toBe('');
 	});
 
+	it('should remove ComponentList items with falsy keys (empty string, 0)', async () => {
+		vi.useFakeTimers();
+		try {
+			const ItemList = componentList<{ id: string | number }>(
+				(item) => {
+					const div = document.createElement('div');
+					appendChild(div, () => 'Item:' + item.get().id);
+					return div;
+				},
+				(item) => item.id
+			);
+
+			const container = document.createElement('div');
+			document.body.appendChild(container);
+			const listSignal = signal<{ id: string | number }[]>([{ id: '' }, { id: 0 }, { id: 'x' }]);
+			ItemList(listSignal).mount(container);
+			expect(container.children.length).toBe(3);
+
+			listSignal.set([{ id: 'x' }]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(container.children.length).toBe(1);
+			expect(container.textContent).toBe('Item:x');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('should unmount nested ComponentList when parent is unmounted', () => {
 		const listItemUnmountSpy = vi.fn();
 		const parentUnmountSpy = vi.fn();
