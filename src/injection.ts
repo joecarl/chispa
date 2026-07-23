@@ -36,11 +36,13 @@ class ServiceContainer {
 
 		let service: T;
 
-		globalContext.pushExecutionStack('injectSingleton');
+		// Construct the singleton in a fresh context frame: nothing created inside
+		// may bind to the component/reactivity that happened to trigger the injection
+		globalContext.pushContextFrame();
 		try {
 			service = this.createInstance(token);
 		} finally {
-			globalContext.popExecutionStack();
+			globalContext.popContextFrame();
 		}
 
 		this.services.set(token, service);

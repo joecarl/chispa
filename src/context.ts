@@ -2,57 +2,99 @@ import { Component, ComponentList } from './components';
 import { ChispaDebugConfig } from './config';
 import { Signal } from './signals';
 
-type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity' | 'injectSingleton';
+type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity';
 
 export interface IDisposable {
 	dispose: () => void;
 }
 
+export interface IDisposableOwner {
+	addDisposable(disposable: IDisposable): void;
+}
+
+/**
+ * An isolated set of execution stacks. A fresh frame is pushed while a singleton
+ * service is being constructed, so nothing created inside it can bind to (or be
+ * tracked by) whatever component, reactivity or computed happened to trigger the
+ * injection. Everything the singleton mounts or creates lives on its own frame,
+ * where ownership and tracking work exactly as in the root frame.
+ */
+class ContextFrame {
+	reactivityContextStack: Reactivity[] = [];
+
+	executionStack: ExecutionKind[] = [];
+
+	componentStack: (Component | ComponentList)[] = [];
+
+	// Components and executing/evaluating reactivities, in nesting order. The innermost
+	// entry owns the reactivities created within, so it can dispose them later.
+	ownerStack: IDisposableOwner[] = [];
+}
+
 class AppContext {
-	private reactivityContextStack: Reactivity[] = [];
-
 	private refreshTimeout: any = 0;
-
-	//private contexts = new Set<RenderContext>();
 
 	private dirtyReactivities = new Set<Reactivity>();
 
-	private executionStack: ExecutionKind[] = [];
+	private frames: ContextFrame[] = [new ContextFrame()];
 
-	private componentStack: (Component | ComponentList)[] = [];
+	private get frame(): ContextFrame {
+		return this.frames[this.frames.length - 1];
+	}
+
+	pushContextFrame() {
+		this.frames.push(new ContextFrame());
+	}
+
+	popContextFrame() {
+		if (this.frames.length === 1) {
+			throw new Error('Cannot pop the root context frame');
+		}
+		this.frames.pop();
+	}
 
 	pushComponentStack(cmp: Component | ComponentList) {
-		this.componentStack.push(cmp);
+		this.frame.componentStack.push(cmp);
+		this.frame.ownerStack.push(cmp);
 	}
 
 	popComponentStack() {
-		this.componentStack.pop();
+		this.frame.componentStack.pop();
+		this.frame.ownerStack.pop();
 	}
 
 	getCurrentComponent() {
-		if (this.executionStack.includes('injectSingleton')) return null;
-		if (this.componentStack.length === 0) {
+		const stack = this.frame.componentStack;
+		if (stack.length === 0) {
 			//console.warn('No current component');
 			return null;
 		}
-		return this.componentStack[this.componentStack.length - 1];
+		return stack[stack.length - 1];
+	}
+
+	getCurrentOwner(): IDisposableOwner | null {
+		const stack = this.frame.ownerStack;
+		if (stack.length === 0) return null;
+		return stack[stack.length - 1];
 	}
 
 	setCurrentReactivityContext(context: Reactivity) {
-		this.reactivityContextStack.push(context);
-		//this.contexts.add(context);
+		this.frame.reactivityContextStack.push(context);
+		this.frame.ownerStack.push(context);
 	}
 
 	restorePreviousReactivityContext() {
-		this.reactivityContextStack.pop();
+		this.frame.reactivityContextStack.pop();
+		this.frame.ownerStack.pop();
 	}
 
 	getCurrentRenderContext() {
-		if (this.reactivityContextStack.length === 0) {
+		const stack = this.frame.reactivityContextStack;
+		if (stack.length === 0) {
 			//console.warn('No current render context');
 			return null;
 		}
-		return this.reactivityContextStack[this.reactivityContextStack.length - 1];
+		return stack[stack.length - 1];
 	}
 
 	// Maximum number of iterations to process during a scheduled refresh. Prevents
@@ -102,18 +144,17 @@ class AppContext {
 	}
 
 	canReadSignal() {
-		const length = this.executionStack.length;
-		if (length === 0) return true;
-		const current = this.executionStack[length - 1];
-		return current !== 'createComponent';
+		const stack = this.frame.executionStack;
+		if (stack.length === 0) return true;
+		return stack[stack.length - 1] !== 'createComponent';
 	}
 
 	pushExecutionStack(type: ExecutionKind) {
-		this.executionStack.push(type);
+		this.frame.executionStack.push(type);
 	}
 
 	popExecutionStack() {
-		this.executionStack.pop();
+		this.frame.executionStack.pop();
 	}
 
 	addDirtyContext(ctx: Reactivity) {
@@ -125,20 +166,35 @@ class AppContext {
 	}
 }
 
-export class Reactivity implements IDisposable {
+export class Reactivity implements IDisposable, IDisposableOwner {
 	private dirty: boolean = false;
 
 	private signals = new Set<Signal<any>>();
 
+	// Disposables (e.g. nested reactivities) created during this reactivity's execution.
+	// They belong to that execution: re-running the action recreates the ones still
+	// needed, so the previous ones must be disposed to avoid leaking subscriptions.
+	private ownedDisposables: IDisposable[] = [];
+
 	constructor(private readonly action: () => void) {
-		const currentComponent = globalContext.getCurrentComponent();
-		if (currentComponent) {
-			currentComponent.addDisposable(this);
+		const owner = globalContext.getCurrentOwner();
+		if (owner) {
+			owner.addDisposable(this);
 		} else {
 			if (ChispaDebugConfig.enableReactivityWarnings) {
 				console.warn('Creating a Reactivity outside of a component');
 			}
 		}
+	}
+
+	addDisposable(disposable: IDisposable) {
+		this.ownedDisposables.push(disposable);
+	}
+
+	private disposeOwned() {
+		const owned = this.ownedDisposables;
+		this.ownedDisposables = [];
+		owned.forEach((d) => d.dispose());
 	}
 
 	markDirty() {
@@ -164,6 +220,7 @@ export class Reactivity implements IDisposable {
 	}
 
 	exec() {
+		this.disposeOwned();
 		this.signals.forEach((s) => s.removeContext(this));
 		this.signals.clear();
 		globalContext.setCurrentReactivityContext(this);
@@ -172,6 +229,7 @@ export class Reactivity implements IDisposable {
 	}
 
 	dispose() {
+		this.disposeOwned();
 		this.signals.forEach((s) => s.removeContext(this));
 		this.signals.clear();
 		this.dirty = false;

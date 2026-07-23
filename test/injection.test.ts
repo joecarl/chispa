@@ -5,7 +5,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { inject, provide, resetServices, InjectionToken } from '../src/injection';
 import { signal } from '../src/signals';
 import { globalContext } from '../src/context';
-import { component } from '../src/components';
+import { component, onUnmount } from '../src/components';
+import { appendChild } from '../src/builder';
 
 beforeEach(() => {
 	resetServices();
@@ -43,6 +44,106 @@ describe('inject()', () => {
 		class ServiceB {}
 
 		expect(inject(ServiceA)).not.toBe(inject(ServiceB));
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Components mounted inside a singleton: the injection guard must only cut
+// ties with what existed BEFORE the injection began, not with the singleton's
+// own component tree
+// ---------------------------------------------------------------------------
+
+describe('inject() – components mounted inside a singleton', () => {
+	it('nested components inside a singleton component tree are disposed with their parent', () => {
+		const childUnmountSpy = vi.fn();
+
+		const Child = component(() => {
+			onUnmount(childUnmountSpy);
+			return document.createElement('span');
+		});
+
+		class UiService {
+			panel = component(() => {
+				const div = document.createElement('div');
+				Child().mount(div);
+				return div;
+			})();
+
+			constructor() {
+				this.panel.mount(document.body);
+			}
+		}
+
+		const svc = inject(UiService);
+		expect(childUnmountSpy).not.toHaveBeenCalled();
+
+		svc.panel.unmount();
+		expect(childUnmountSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it('signal reads inside a singleton constructor are not tracked by the evaluating reactivity', async () => {
+		const constructorSignal = signal(0);
+		let evaluations = 0;
+
+		class LazyService {
+			value: number;
+			constructor() {
+				// Incidental one-time read during construction
+				this.value = constructorSignal.get();
+			}
+		}
+
+		const Host = component(() => {
+			const div = document.createElement('div');
+			appendChild(div, () => {
+				evaluations++;
+				return String(inject(LazyService).value);
+			});
+			return div;
+		});
+
+		const container = document.createElement('div');
+		Host().mount(container);
+		await vi.runOnlyPendingTimersAsync();
+		expect(evaluations).toBe(1);
+		expect(container.textContent).toBe('0');
+
+		// The constructor's read must not have subscribed the child computed
+		constructorSignal.set(1);
+		await vi.runOnlyPendingTimersAsync();
+		expect(evaluations).toBe(1);
+	});
+
+	it('a singleton top-level component is NOT tied to the component that triggered the injection', () => {
+		class PanelService {
+			panel = component(() => {
+				const div = document.createElement('div');
+				div.className = 'service-panel';
+				return div;
+			})();
+
+			constructor() {
+				this.panel.mount(document.body);
+			}
+		}
+
+		const Host = component(() => {
+			inject(PanelService);
+			return document.createElement('div');
+		});
+
+		const host = Host();
+		const mountPoint = document.createElement('div');
+		document.body.appendChild(mountPoint);
+		host.mount(mountPoint);
+		expect(document.querySelector('.service-panel')).not.toBeNull();
+
+		// Unmounting the injecting component must not unmount the service's panel
+		host.unmount();
+		expect(document.querySelector('.service-panel')).not.toBeNull();
+
+		inject(PanelService).panel.unmount();
+		mountPoint.remove();
 	});
 });
 
