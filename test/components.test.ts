@@ -215,6 +215,89 @@ describe('Component Creation, Mounting, and Unmounting', () => {
 		}
 	});
 
+	it('should reorder items correctly when inserting a new item and moving existing ones', async () => {
+		vi.useFakeTimers();
+		try {
+			const ItemList = componentList<{ id: string }>(
+				(item) => {
+					const div = document.createElement('div');
+					appendChild(div, () => item.get().id);
+					return div;
+				},
+				(item) => item.id
+			);
+
+			const container = document.createElement('div');
+			document.body.appendChild(container);
+			const listSignal = signal([{ id: 'a' }, { id: 'b' }]);
+			ItemList(listSignal).mount(container);
+
+			listSignal.set([{ id: 'x' }, { id: 'b' }, { id: 'a' }]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(Array.from(container.children).map((c) => c.textContent)).toEqual(['x', 'b', 'a']);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('should handle every permutation transition and mixed insert/remove/reorder steps', async () => {
+		vi.useFakeTimers();
+		try {
+			const ItemList = componentList<{ id: string }>(
+				(item) => {
+					const div = document.createElement('div');
+					appendChild(div, () => item.get().id);
+					return div;
+				},
+				(item) => item.id
+			);
+
+			const container = document.createElement('div');
+			document.body.appendChild(container);
+			const listSignal = signal<{ id: string }[]>([]);
+			ItemList(listSignal).mount(container);
+
+			const apply = async (keys: string[]) => {
+				listSignal.set(keys.map((id) => ({ id })));
+				await vi.runOnlyPendingTimersAsync();
+				expect(Array.from(container.children).map((c) => c.textContent)).toEqual(keys);
+			};
+
+			// All transitions between permutations of [a, b, c]
+			const perms = [
+				['a', 'b', 'c'],
+				['a', 'c', 'b'],
+				['b', 'a', 'c'],
+				['b', 'c', 'a'],
+				['c', 'a', 'b'],
+				['c', 'b', 'a'],
+			];
+			for (const from of perms) {
+				for (const to of perms) {
+					await apply(from);
+					await apply(to);
+				}
+			}
+
+			// Mixed inserts, removals and reorders
+			const steps = [
+				['a', 'b', 'c'],
+				['x', 'b', 'a'],
+				['a', 'x', 'y', 'b'],
+				['y'],
+				['z', 'y'],
+				['y', 'z'],
+				[],
+				['a', 'b', 'c'],
+			];
+			for (const step of steps) {
+				await apply(step);
+			}
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('should unmount nested ComponentList when parent is unmounted', () => {
 		const listItemUnmountSpy = vi.fn();
 		const parentUnmountSpy = vi.fn();

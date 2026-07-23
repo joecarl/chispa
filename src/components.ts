@@ -126,7 +126,6 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	private container: Node | null = null; // Contenedor donde se montan los nodos
 	private anchor: Node | null = null; // Nodes must be inserted before this node
 	private ownAnchor: Node | null = null; // Anchor created by this list when mounted without one
-	private currentKeys: any[] = [];
 	public disposables: any[] = [];
 
 	constructor(
@@ -179,66 +178,45 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 		return component;
 	}
 
-	private getTargetAnchor(items: TItem[], index: number): Node | null {
-		const nextItem = index + 1 < items.length ? items[index + 1] : null;
-		const nextComp = nextItem ? this.components.get(this.keyFn(nextItem, index + 1)) : null;
-		if (nextComp && nextComp.nodes) {
-			return nextComp.nodes[0];
-		} else {
-			// Es el último componente, debería insertarse antes del anchor original
-			return this.anchor;
-		}
-	}
-
 	/**
 	 * Función principal que sincroniza los componentes DOM con un array de keys
 	 */
 	private synchronizeComponents(): void {
-		const existingComponents = this.getAllComponents();
-
-		// Identificar qué componentes eliminar (los que no están en keys)
 		const items = this.itemsSignal.get();
 		const keys = items.map((item, index) => this.keyFn(item, index));
-		const componentsToRemove = existingComponents.filter((component) => !keys.includes(component.key));
-		componentsToRemove.forEach((component) => this.removeComponent(component));
+		const keySet = new Set(keys);
 
-		this.currentKeys = this.currentKeys.filter((key) => keys.includes(key));
-		//console.log('Current keys:', this.currentKeys, 'Target keys:', keys);
+		// Eliminar los componentes cuya key ya no está en la lista
+		const componentsToRemove = this.getAllComponents().filter((component) => !keySet.has(component.key));
+		componentsToRemove.forEach((component) => this.removeComponent(component));
 
 		if (!this.container) {
 			console.warn('Container is null in synchronizeComponents');
 			return;
 		}
-		// Procesar cada key en el orden deseado
 		const container = this.container;
 
-		items.forEach((item, index) => {
-			const targetKey = this.keyFn(item, index);
-			const currentKey = this.currentKeys[index];
-			if (targetKey === currentKey) {
-				// La key no ha cambiado de posición, no hacer nada
-				return;
-			}
-			const existingComponent = this.components.get(targetKey);
-
-			if (existingComponent) {
-				const prevComp = this.components.get(currentKey);
-				if (!prevComp || !prevComp.nodes) {
-					console.warn('Previous component or its nodes not found for key', currentKey);
-					return;
+		// Recorrer los items de atrás hacia adelante manteniendo el anchor de inserción.
+		// Tras procesar los items i+1..n, esa región ya está en su orden final empezando
+		// justo antes de `anchor`, así que el item i está bien colocado si y solo si su
+		// último nodo precede a `anchor`. El propio DOM es la fuente de verdad: no hace
+		// falta contabilidad paralela de keys, y los items ya ordenados no se mueven.
+		let anchor = this.anchor;
+		for (let index = items.length - 1; index >= 0; index--) {
+			let component = this.components.get(keys[index]);
+			if (!component) {
+				component = this.createNewComponent(keys[index]);
+				component.mount(container, anchor);
+			} else if (component.nodes && component.nodes.length > 0) {
+				const lastNode = component.nodes[component.nodes.length - 1];
+				if (lastNode.nextSibling !== anchor) {
+					component.reanchor(anchor);
 				}
-				existingComponent.reanchor(prevComp.nodes[0]);
-				// Reordenar el array de keys actuales
-				this.currentKeys = this.currentKeys.filter((k) => k !== targetKey);
-				this.currentKeys.splice(index, 0, targetKey);
-			} else {
-				// El componente no existe, crearlo
-				const targetAnchor = this.getTargetAnchor(items, index);
-				const newComponent = this.createNewComponent(targetKey);
-				newComponent.mount(container, targetAnchor);
-				this.currentKeys.splice(index, 0, targetKey);
 			}
-		});
+			if (component.nodes && component.nodes.length > 0) {
+				anchor = component.nodes[0];
+			}
+		}
 	}
 
 	mount(container: Node, anchor: Node | null = null) {
