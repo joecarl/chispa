@@ -23,7 +23,7 @@ export interface SelectOption {
 	disabled?: boolean;
 }
 
-type InputValueType = string | number;
+export type InputValueType = string | number;
 
 interface TypeConverter<T extends InputValueType> {
 	toTargetType: (val: string) => T;
@@ -224,5 +224,25 @@ export function bindControlledSelect(element: HTMLSelectElement, valueSignal: Wr
 	// Return a cleanup function
 	return () => {
 		element.removeEventListener('change', handleChange);
+	};
+}
+
+// --- Ref binding helpers ----------------------------------------------------
+
+export function refBindInput<T extends InputValueType>(valueSignal: WritableSignal<T>, options: ControlledInputOptions<T> = {}) {
+	return (el: HTMLInputElement | HTMLTextAreaElement) => {
+		bindControlledInput<T>(el, valueSignal, options);
+	};
+}
+
+export function refBindCheckbox(valueSignal: WritableSignal<boolean>, indeterminate?: Signal<boolean>) {
+	return (el: HTMLInputElement) => {
+		bindControlledCheckbox(el, valueSignal, indeterminate);
+	};
+}
+
+export function refBindSelect(valueSignal: WritableSignal<string>, optionList?: Signal<SelectOption[]> | SelectOption[]) {
+	return (el: HTMLSelectElement) => {
+		bindControlledSelect(el, valueSignal, optionList);
 	};
 }

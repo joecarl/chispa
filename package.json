@@ -1,6 +1,6 @@
 {
 	"name": "chispa",
-	"version": "0.10.1",
+	"version": "0.10.2",
 	"description": "A fully declarative UI reactive engine for building web applications.",
 	"author": "José Carlos HR <joecarlhr@gmail.com>",
 	"license": "MIT",
@@ -33,7 +33,7 @@
 	},
 	"devDependencies": {
 		"@types/jsdom": "^28.0.1",
-		"tsup": "^8.5.1",
+		"tsdown": "^0.22.13",
 		"typescript": "^6.0.2",
 		"vite": "^8.0.8",
 		"vitest": "^4.1.4"
@@ -43,7 +43,7 @@
 	},
 	"homepage": "https://github.com/joecarl/chispa#readme",
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"start": "echo \"Error: no dev mode available\" && exit 1",
 		"test": "vitest",
 		"prepublishOnly": "npm run build"
