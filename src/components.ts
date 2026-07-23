@@ -125,6 +125,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	private readonly components: Map<string, Component<TProps>>;
 	private container: Node | null = null; // Contenedor donde se montan los nodos
 	private anchor: Node | null = null; // Nodes must be inserted before this node
+	private ownAnchor: Node | null = null; // Anchor created by this list when mounted without one
 	private currentKeys: any[] = [];
 	public disposables: any[] = [];
 
@@ -243,6 +244,14 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	mount(container: Node, anchor: Node | null = null) {
 		//console.log('Mounting ComponentList');
 		this.container = container;
+		if (!anchor) {
+			// Without an anchor, items created later would be appended at the end of the
+			// container, after any sibling nodes added meanwhile. Create one to keep a
+			// stable insertion point.
+			anchor = document.createTextNode('');
+			container.appendChild(anchor);
+			this.ownAnchor = anchor;
+		}
 		this.anchor = anchor;
 
 		// If mounting within another component, register for automatic unmounting
@@ -267,6 +276,10 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	unmount() {
 		//console.log('Unmounting ComponentList');
 		this.clear();
+		if (this.ownAnchor && this.ownAnchor.parentNode) {
+			this.ownAnchor.parentNode.removeChild(this.ownAnchor);
+		}
+		this.ownAnchor = null;
 		this.container = null!;
 		this.anchor = null!;
 		this.disposables.forEach((d) => {

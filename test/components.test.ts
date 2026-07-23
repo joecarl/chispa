@@ -177,6 +177,44 @@ describe('Component Creation, Mounting, and Unmounting', () => {
 		}
 	});
 
+	it('should keep list items before sibling nodes appended after the list', async () => {
+		vi.useFakeTimers();
+		try {
+			const ItemList = componentList<{ id: string }>(
+				(item) => {
+					const div = document.createElement('div');
+					appendChild(div, () => item.get().id);
+					return div;
+				},
+				(item) => item.id
+			);
+
+			const container = document.createElement('div');
+			document.body.appendChild(container);
+			const listSignal = signal([{ id: 'a' }]);
+			appendChild(container, ItemList(listSignal));
+
+			// Sibling appended after the list (like a footer card)
+			const footer = document.createElement('footer');
+			container.appendChild(footer);
+
+			const order = () => Array.from(container.children).map((c) => (c.tagName === 'FOOTER' ? '<footer>' : c.textContent));
+			expect(order()).toEqual(['a', '<footer>']);
+
+			// Growing the list must insert the new items before the sibling
+			listSignal.set([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(order()).toEqual(['a', 'b', 'c', '<footer>']);
+
+			// Even when every original item has been replaced
+			listSignal.set([{ id: 'x' }, { id: 'y' }]);
+			await vi.runOnlyPendingTimersAsync();
+			expect(order()).toEqual(['x', 'y', '<footer>']);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('should unmount nested ComponentList when parent is unmounted', () => {
 		const listItemUnmountSpy = vi.fn();
 		const parentUnmountSpy = vi.fn();
