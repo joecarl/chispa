@@ -9,5 +9,5 @@ export type { SelectOption, InputValueType, ControlledInputOptions } from './con
 export { bindControlledInput, bindControlledSelect, bindControlledCheckbox, refBindInput, refBindCheckbox, refBindSelect } from './controlled-input';
 export { Router, Link, navigate, pathMatches } from './router';
 export type { Route, LinkProps } from './router';
-export { ChispaDebugConfig } from './config';
+export { ChispaDebugConfig, enableDevDebugging } from './config';
 export { inject, provide, resetServices, InjectionToken } from './injection';

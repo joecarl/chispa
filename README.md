@@ -110,8 +110,12 @@ Unlike other UI frameworks, the component function runs only once, when the comp
 **main.ts**
 
 ```typescript
-import { appendChild } from 'chispa';
+import { appendChild, enableDevDebugging } from 'chispa';
 import { MyComponent } from './my-component';
+
+// Development warnings (unbound data-cb, reactivities that will never re-run).
+// Chispa logs nothing by default; the guard lets production builds drop the call.
+if (import.meta.env.DEV) enableDevDebugging();
 
 appendChild(document.body, MyComponent());
 ```
