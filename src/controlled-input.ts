@@ -1,7 +1,7 @@
 import { appendChild, setProps } from './builder';
 import { componentList } from './components';
 import { globalContext } from './context';
-import { computed, isSignal, Signal, WritableSignal } from './signals';
+import { isSignal, signal, Signal, WritableSignal } from './signals';
 
 export interface ControlledInputOptions<T> {
 	/**
@@ -195,7 +195,7 @@ export function bindControlledSelect(element: HTMLSelectElement, valueSignal: Wr
 
 	// Subscribe to options signal changes if provided
 	if (optionList) {
-		const optionsSignal = isSignal(optionList) ? optionList : computed(() => optionList || []);
+		const optionsSignal = isSignal(optionList) ? optionList : signal(optionList);
 
 		element.innerHTML = '';
 		appendChild(element, Options(optionsSignal));

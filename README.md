@@ -1,47 +1,47 @@
 # Chispa [![npm version](https://img.shields.io/npm/v/chispa.svg?style=flat)](https://www.npmjs.com/package/chispa)
 
-Un motor UI reactivo, extremadamente minimalista y sorprendentemente potente.
+A reactive UI engine, extremely minimalist and surprisingly powerful.
 
-Chispa nació de la frustración tras años utilizando los frameworks más populares (como React o Angular) y no encontrar ninguno que me convenciese plenamente en todos los aspectos. Se ha construido destilando lo mejor de cada uno, sumando ideas propias y eliminando sistemáticamente todo lo que sobra.
+Chispa was born out of frustration after years of using the most popular frameworks (such as React or Angular) without finding one that fully convinced me in every respect. It has been built by distilling the best of each, adding ideas of its own and systematically removing everything that is superfluous.
 
-El resultado es un motor que pone el foco en la **simpleza absoluta y la limpieza del código**. No es solo un motor para pequeños módulos; tras migrar proyectos complejos a Chispa, la experiencia ha demostrado que el código resultante es mucho más legible, mantenible y libre de la "magia" impredecible de otros frameworks.
+The result is an engine focused on **absolute simplicity and clean code**. It is not just an engine for small modules; after migrating complex projects to Chispa, experience has shown that the resulting code is far more readable, maintainable and free of the unpredictable "magic" of other frameworks.
 
-**Principio fundamental**: la función del componente se ejecuta una sola vez; el resto es flujo puro de datos (**signals → DOM**).
+**Core principle**: the component function runs only once; everything else is pure data flow (**signals → DOM**).
 
-## ¿Por qué elegir Chispa?
+## Why Chispa?
 
-- **Baja complejidad mental**: Olvídate de ciclos de vida opacos, re-renders infinitos o hooks con reglas complejas.
-- **Control total**: Tienes acceso directo al DOM real y a las plantillas HTML, sin las abstracciones pesadas de un Virtual DOM.
-- **Código limpio**: Al separar la estructura HTML de la lógica TS y usar señales precisas, el código se vuelve declarativo y extremadamente fácil de seguir.
-- **Rendimiento nativo**: Solo se actualiza el nodo exacto que cambia. Eficiencia máxima por diseño.
-- **HTML real**: Plantillas HTML puras importadas, sin JSX ni transformaciones mágicas.
-- **TS/JS de un solo paso**: Las funciones de componente se ejecutan una vez (setup), eliminando problemas de estado efímero en cada render.
-- **Bindings precisos signal → DOM**: Actualizaciones atómicas sin heurísticas de comparación de árboles.
-- **Motor embebible**: Sin arquitectura impuesta; perfecto tanto para aplicaciones completas como para ser incrustado en sistemas existentes.
-- **Ligero**: Sin dependencias en tiempo de ejecución.
-- **Integración con Vite**: Incluye un plugin de Vite para una experiencia de desarrollo fluida.
+- **Low mental overhead**: Forget opaque lifecycles, endless re-renders or hooks with complex rules.
+- **Full control**: Direct access to the real DOM and to the HTML templates, with none of the heavy abstractions of a Virtual DOM.
+- **Clean code**: Separating HTML structure from TS logic and using precise signals makes the code declarative and extremely easy to follow.
+- **Native performance**: Only the exact node that changes is updated. Maximum efficiency by design.
+- **Real HTML**: Plain HTML templates imported as-is, no JSX and no magic transformations.
+- **Single-pass TS/JS**: Component functions run once (setup), eliminating ephemeral-state problems on every render.
+- **Precise signal → DOM bindings**: Atomic updates without tree-diffing heuristics.
+- **Embeddable engine**: No imposed architecture; perfect both for full applications and for embedding in existing systems.
+- **Lightweight**: No runtime dependencies.
+- **Vite integration**: Ships a Vite plugin for a smooth development experience.
 
-## Crear un nuevo proyecto
+## Create a new project
 
-Puedes crear rápidamente un nuevo proyecto de chispa lanzando el comando:
+You can quickly scaffold a new chispa project by running:
 
 ```bash
 npx create-chispa my-app
 ```
 
-## Setup manual
+## Manual setup
 
-### Instalación
+### Installation
 
-Instala `chispa` en tu proyecto:
+Install `chispa` in your project:
 
 ```bash
 npm install chispa
 ```
 
-### Configuración (Vite)
+### Configuration (Vite)
 
-Para usar las plantillas HTML, necesitas configurar el plugin de Chispa en tu `vite.config.ts`:
+To use HTML templates you need to add the Chispa plugin to your `vite.config.ts`:
 
 ```typescript
 import { defineConfig } from 'vite';
@@ -52,7 +52,7 @@ export default defineConfig({
 });
 ```
 
-Para que el tipado funcione correctamente también es necesario agregar esto en `tsconfig.json`:
+For typings to work correctly you also need to add this to `tsconfig.json`:
 
 ```json
 {
@@ -62,19 +62,19 @@ Para que el tipado funcione correctamente también es necesario agregar esto en 
 }
 ```
 
-## Uso Básico
+## Basic usage
 
-### 1. Crear un Componente
+### 1. Create a component
 
-Chispa permite definir la estructura de tu componente en un archivo HTML y la lógica en TypeScript.
+Chispa lets you define your component's structure in an HTML file and its logic in TypeScript.
 
 **my-component.html**
-Usa el atributo `data-cb` para marcar elementos que serán controlados por tu código.
+Use the `data-cb` attribute to mark the elements that will be controlled from your code.
 
 ```html
 <div class="my-app">
-	<h1>Contador: <span data-cb="countDisplay">0</span></h1>
-	<button data-cb="incrementBtn">Incrementar</button>
+	<h1>Counter: <span data-cb="countDisplay">0</span></h1>
+	<button data-cb="incrementBtn">Increment</button>
 </div>
 ```
 
@@ -82,30 +82,30 @@ Usa el atributo `data-cb` para marcar elementos que serán controlados por tu c�
 
 ```typescript
 import { component, signal } from 'chispa';
-import tpl from './my-component.html'; // Importa el HTML procesado
+import tpl from './my-component.html'; // Imports the processed HTML
 
 export const MyComponent = component(() => {
-	// Estado reactivo
+	// Reactive state
 	const count = signal(0);
 
-	// Retorna el fragmento enlazando los elementos del HTML
+	// Return the fragment, binding the HTML elements
 	return tpl.fragment({
-		// Enlaza el contenido directamente con la señal
+		// Bind the content directly to the signal
 		countDisplay: { inner: count },
 
 		incrementBtn: {
-			// Enlaza el evento click del botón
+			// Bind the button's click event
 			onclick: () => count.update((v) => v + 1),
-			// Enlaza una propiedad con una función reactiva
+			// Bind a property to a reactive function
 			disabled: () => count.get() >= 10,
 		},
 	});
 });
 ```
 
-A diferencia de otros frameworks de UI, la función del componente se ejecuta una sola vez al montarse. Las actualizaciones de estado no provocan que la función del componente se vuelva a ejecutar. En su lugar, el sistema actualiza de manera atómica únicamente los nodos o atributos vinculados a la señal modificada. Por este motivo no está permitido leer el valor de las señales directamente en el cuerpo de la función factory del componente; su lectura debe realizarse dentro de callbacks o efectos.
+Unlike other UI frameworks, the component function runs only once, when the component mounts. State updates do not cause the component function to run again. Instead, the system atomically updates only the nodes or attributes bound to the signal that changed. For this reason, reading a signal's value directly in the body of the component's factory function is not allowed; reads must happen inside callbacks or effects.
 
-### 2. Montar la Aplicación
+### 2. Mount the application
 
 **main.ts**
 
@@ -116,6 +116,10 @@ import { MyComponent } from './my-component';
 appendChild(document.body, MyComponent());
 ```
 
-## Licencia
+## Documentation
+
+The full reference (lists, `nodes`, controlled inputs, dependency injection, the asynchronous update model and debugging warnings) lives in [DOCUMENTATION.md](./DOCUMENTATION.md).
+
+## License
 
 MIT

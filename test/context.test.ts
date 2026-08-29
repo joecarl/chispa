@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { globalContext } from '../src/context';
-import { ChispaDebugConfig } from '../src/config';
+import { signal } from '../src/signals';
 
 describe('AppContext.scheduleRefresh', () => {
 	beforeEach(() => {
@@ -22,24 +22,23 @@ describe('AppContext.scheduleRefresh', () => {
 		const original = globalContext.maxScheduleIterations;
 		globalContext.maxScheduleIterations = 5;
 
-		ChispaDebugConfig.enableReactivityWarnings = true;
-
-		let count = 0;
-		// This reactivity will re-mark itself dirty every time it runs, forcing
-		// the scheduleRefresh loop to iterate repeatedly.
+		// Two reactivities that keep marking each other dirty: every refresh iteration
+		// leaves the other one pending, so the loop can only stop at the iteration limit.
+		// (A reactivity that marks *itself* dirty during its own run is cleared again by
+		// process(), so it would never exercise the guard.)
+		const a = signal(0);
+		const b = signal(0);
 		globalContext.addReactivity(() => {
-			count++;
-			const ctx = globalContext.getCurrentRenderContext();
-			if (ctx) {
-				ctx.markDirty();
-			}
+			b.set(a.get() + 1);
 		});
-
-		ChispaDebugConfig.enableReactivityWarnings = false;
+		globalContext.addReactivity(() => {
+			a.set(b.get() + 1);
+		});
 
 		await vi.runOnlyPendingTimersAsync();
 
-		expect(warnSpy).toHaveBeenCalled();
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('possible uncontrolled reactivity cascade'));
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('processed 5 iterations'));
 		warnSpy.mockRestore();
 		globalContext.maxScheduleIterations = original;
 	});

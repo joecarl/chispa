@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { signal, computed, effect, isSignal, isWriteableSignal } from '../src/signals';
+import { signal, computed, effect, isSignal, isWriteableSignal, type Signal } from '../src/signals';
 import { globalContext } from '../src/context';
+import { ChispaDebugConfig } from '../src/config';
 
 describe('Signals', () => {
 	beforeEach(() => {
@@ -210,5 +211,164 @@ describe('Signals', () => {
 			await vi.runAllTimersAsync();
 			expect(effectCalled).toBe(2);
 		});
+	});
+});
+
+describe('Dependency tracking and refresh timing (documented behaviour)', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('writable signals update synchronously, but computed/effects only on the next scheduled refresh', async () => {
+		const a = signal(1);
+		const double = computed(() => a.get() * 2);
+		let seen = 0;
+		effect(() => {
+			seen = double.get();
+		});
+
+		a.set(5);
+		expect(a.get()).toBe(5);
+		// Dependents (and therefore the DOM) still hold the previous value until the batched refresh runs
+		expect(double.get()).toBe(2);
+		expect(seen).toBe(2);
+
+		await vi.runOnlyPendingTimersAsync();
+		expect(double.get()).toBe(10);
+		expect(seen).toBe(10);
+	});
+
+	it('several writes in the same tick are applied in a single refresh', async () => {
+		const a = signal(1);
+		const b = signal(1);
+		let runs = 0;
+		effect(() => {
+			a.get() + b.get();
+			runs++;
+		});
+		expect(runs).toBe(1);
+
+		a.set(2);
+		b.set(3);
+		a.set(4);
+		await vi.runOnlyPendingTimersAsync();
+		expect(runs).toBe(2);
+	});
+
+	it('does not re-evaluate a computed whose first run read no signal (there is nothing to subscribe to)', async () => {
+		const invalid = signal(false);
+		const sibling: { current: { invalid: Signal<boolean> } | null } = { current: null };
+		// The sibling is "not mounted yet": the branch that reads a signal is never taken
+		const hasError = computed(() => (sibling.current ? sibling.current.invalid.get() : false));
+
+		sibling.current = { invalid };
+		invalid.set(true);
+		await vi.runOnlyPendingTimersAsync();
+
+		expect(hasError.get()).toBe(false);
+	});
+
+	it('modelling the late reference as a signal keeps the computed subscribed', async () => {
+		const invalid = signal(false);
+		const siblingRef = signal<{ invalid: Signal<boolean> } | null>(null);
+		const hasError = computed(() => siblingRef.get()?.invalid.get() ?? false);
+
+		siblingRef.set({ invalid });
+		await vi.runOnlyPendingTimersAsync();
+		expect(hasError.get()).toBe(false);
+
+		invalid.set(true);
+		await vi.runOnlyPendingTimersAsync();
+		expect(hasError.get()).toBe(true);
+	});
+});
+
+describe('Inert reactivity warnings', () => {
+	const originalFlag = ChispaDebugConfig.enableInertReactivityWarnings;
+
+	beforeEach(() => {
+		vi.useFakeTimers();
+		ChispaDebugConfig.enableInertReactivityWarnings = true;
+	});
+
+	afterEach(() => {
+		ChispaDebugConfig.enableInertReactivityWarnings = originalFlag;
+		vi.useRealTimers();
+		vi.restoreAllMocks();
+	});
+
+	it('warns when a computed reads no signal on its first evaluation', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		computed(() => 42);
+
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0][0]).toContain('computed did not read any signal on its first evaluation');
+		expect(warnSpy.mock.calls[0][0]).toContain('42');
+	});
+
+	it('warns for the "late sibling" case: a conditional branch that skips every signal read', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const sibling: { current: { invalid: Signal<boolean> } | null } = { current: null };
+
+		computed(() => (sibling.current ? sibling.current.invalid.get() : false));
+
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0][0]).toContain('will never re-run');
+	});
+
+	it('warns when an effect reads no signal', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		effect(() => {});
+
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0][0]).toContain('effect did not read any signal on its first evaluation');
+	});
+
+	it('does not warn when at least one signal is read', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const a = signal(1);
+
+		computed(() => a.get() * 2);
+		effect(() => {
+			a.get();
+		});
+
+		expect(warnSpy).not.toHaveBeenCalled();
+	});
+
+	it('does not warn when enableInertReactivityWarnings is disabled', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		ChispaDebugConfig.enableInertReactivityWarnings = false;
+
+		computed(() => 42);
+		effect(() => {});
+
+		expect(warnSpy).not.toHaveBeenCalled();
+	});
+
+	it('only checks the first evaluation: a re-run that stops reading signals is not reported', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const data = signal<number | null>(null);
+		let loaded = false;
+
+		effect(() => {
+			if (!loaded && data.get() !== null) {
+				loaded = true;
+			}
+		});
+
+		data.set(1); // re-run: reads `data` and flips `loaded`
+		await vi.runOnlyPendingTimersAsync();
+		data.set(2); // re-run: `loaded` short-circuits, nothing is read -> intentionally inert from now on
+		await vi.runOnlyPendingTimersAsync();
+
+		expect(loaded).toBe(true);
+		expect(warnSpy).not.toHaveBeenCalled();
 	});
 });

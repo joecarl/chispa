@@ -75,6 +75,11 @@ export const DemoTable = component((props) => {
 			name: { inner: '*** Filas desmontadas ***', style: { fontStyle: 'italic', color: 'rgb(143 106 48)' } },
 			age: { inner: '-' },
 			city: { inner: '-' },
+			// Esta fila no lleva botones: declararlos como null los omite a propósito
+			// (si simplemente faltasen, chispa avisaría en consola de que no tienen binding)
+			editBtn: null,
+			moveupBtn: null,
+			removeBtn: null,
 		},
 	});
 

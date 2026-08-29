@@ -1,4 +1,5 @@
 import { Component, ComponentList } from './components';
+import { ChispaDebugConfig } from './config';
 import { globalContext } from './context';
 import { computed, isSignal, type Signal } from './signals';
 
@@ -43,6 +44,8 @@ export function getValidProps<T>(props: ChispaNodeBuilderProps<T, any>) {
 	return finalProps as ChispaNodeBuilderProps<T, any>;
 }
 
+// Bindings of the `data-cb` items being built, innermost first. A nested item can be
+// bound in its parent's `nodes` or at any ancestor level (the fragment included).
 const itemsStack: any[] = [];
 function findItemInStack(itemName: string): any {
 	for (const itemsDefs of itemsStack) {
@@ -53,26 +56,39 @@ function findItemInStack(itemName: string): any {
 	return null;
 }
 
+// A binding declared with an explicit empty value (e.g. `title: null`) means "render
+// nothing" on purpose. Only a name missing from every level is a likely mistake.
+function isItemDeclaredInStack(itemName: string): boolean {
+	return itemsStack.some((itemsDefs) => itemsDefs !== null && typeof itemsDefs === 'object' && itemName in itemsDefs);
+}
+
 export function getItem<T>(template: T, items: any, itemName: keyof T) {
 	itemsStack.unshift(items);
-	const item: any = findItemInStack(itemName as string);
+	try {
+		const item: any = findItemInStack(itemName as string);
 
-	if (!item) {
+		if (!item) {
+			if (ChispaDebugConfig.enableMissingBindingWarnings && !isItemDeclaredInStack(itemName as string)) {
+				console.warn(
+					`[chispa] data-cb '${String(itemName)}' has no binding, so it will not be rendered. ` +
+						`Bind it (e.g. \`${String(itemName)}: {}\`) or set it to null explicitly to omit it on purpose.`
+				);
+			}
+			return null;
+		}
+
+		if (item.constructor && item.constructor.name === 'Object' && !(item instanceof Element)) {
+			const Comp = template[itemName] as (props: any) => Element;
+			const itemProps = item;
+
+			return Comp(itemProps);
+		}
+
+		return item;
+	} finally {
+		// Always restore the stack, even if a builder throws, so later lookups never see stale bindings
 		itemsStack.shift();
-		return null;
 	}
-
-	let res;
-	if (item.constructor && item.constructor.name === 'Object' && !(item instanceof Element)) {
-		const Comp = template[itemName] as (props: any) => Element;
-		const itemProps = item;
-
-		res = Comp(itemProps);
-	} else {
-		res = item;
-	}
-	itemsStack.shift();
-	return res;
 }
 
 export function setAttributes(node: Element, attributes: Record<string, string>) {

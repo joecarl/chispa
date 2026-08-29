@@ -133,6 +133,7 @@ class AppContext {
 		globalContext.pushExecutionStack('addReactivity');
 		ctx.exec();
 		globalContext.popExecutionStack();
+		warnIfInertReactivity(ctx, 'effect', executor);
 		return ctx;
 	}
 
@@ -211,6 +212,10 @@ export class Reactivity implements IDisposable, IDisposableOwner {
 		this.signals.delete(signal);
 	}
 
+	hasDependencies() {
+		return this.signals.size > 0;
+	}
+
 	process() {
 		if (!this.dirty) return;
 		this.exec();
@@ -235,6 +240,19 @@ export class Reactivity implements IDisposable, IDisposableOwner {
 		this.dirty = false;
 		globalContext.removeDirtyContext(this);
 	}
+}
+
+// Only signals can mark a reactivity dirty, so one that read no signal can never run
+// again. Warn right after its first execution, which is where the mistake was made.
+export function warnIfInertReactivity(ctx: Reactivity, kind: 'computed' | 'effect', fn: Function) {
+	if (!ChispaDebugConfig.enableInertReactivityWarnings || ctx.hasDependencies()) return;
+	const source = fn.toString().replace(/\s+/g, ' ').trim();
+	const snippet = source.length > 80 ? source.slice(0, 77) + '...' : source;
+	console.warn(
+		`[chispa] ${kind} did not read any signal on its first evaluation, so it will never re-run: ${snippet}. ` +
+			`If it must react to state, read the signals it depends on unconditionally (also on the first run); ` +
+			`if the value is constant, pass it directly instead of a function.`
+	);
 }
 
 export const globalContext = new AppContext();

@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setProps } from '../src/builder';
+import { appendChild, getItem, setProps } from '../src/builder';
+import { ChispaDebugConfig } from '../src/config';
 import { signal } from '../src/signals';
 
 describe('Builder Props: addClass and classes', () => {
@@ -35,6 +36,8 @@ describe('Builder Props: addClass and classes', () => {
 		});
 
 		it('should handle function returning class', () => {
+			// A constant function yields an inert reactivity, which chispa warns about (see 'Inert reactivity warnings')
+			vi.spyOn(console, 'warn').mockImplementation(() => {});
 			const div = document.createElement('div');
 			setProps(div, { addClass: () => 'func-class' });
 			expect(div.classList.contains('func-class')).toBe(true);
@@ -149,6 +152,7 @@ describe('Builder Props: addClass and classes', () => {
 		});
 
 		it('should handle classes with functions', () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => {});
 			const div = document.createElement('div');
 			setProps(div, {
 				classes: {
@@ -217,5 +221,148 @@ describe('Builder Props: reactive props', () => {
 		propsSignal.set({ dataset: { test: 'newvalue' } });
 		await vi.runOnlyPendingTimersAsync();
 		expect(div.dataset.test).toBe('newvalue');
+	});
+});
+
+describe('getItem: missing binding warnings', () => {
+	// Mirrors what the html-compiler emits for:
+	// <div data-cb="card"><h1 data-cb="title"></h1></div>
+	const template: any = {
+		fragment: (props: any) => {
+			const fragment = document.createDocumentFragment();
+			appendChild(fragment, getItem(template, props, 'card'));
+			return fragment;
+		},
+		card: (props: any) => {
+			const node = document.createElement('div');
+			setProps(node, props);
+			appendChild(node, getItem(template, props.nodes, 'title'));
+			return node;
+		},
+		title: (props: any) => {
+			const node = document.createElement('h1');
+			setProps(node, props);
+			if (props.inner !== undefined && props.inner !== null) {
+				appendChild(node, props.inner);
+			}
+			return node;
+		},
+	};
+
+	const originalFlag = ChispaDebugConfig.enableMissingBindingWarnings;
+
+	beforeEach(() => {
+		ChispaDebugConfig.enableMissingBindingWarnings = true;
+	});
+
+	afterEach(() => {
+		ChispaDebugConfig.enableMissingBindingWarnings = originalFlag;
+		vi.restoreAllMocks();
+	});
+
+	it('warns and renders nothing when a nested data-cb has no binding at any level', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const fragment = template.fragment({ card: {} });
+
+		expect(fragment.querySelector('div')).not.toBeNull();
+		expect(fragment.querySelector('h1')).toBeNull();
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0][0]).toContain("data-cb 'title' has no binding");
+	});
+
+	it('warns when a top-level data-cb is missing from the fragment props (even with no props at all)', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		expect(template.fragment({}).childNodes.length).toBe(0);
+		expect(template.fragment(undefined).childNodes.length).toBe(0);
+
+		expect(warnSpy).toHaveBeenCalledTimes(2);
+		expect(warnSpy.mock.calls[0][0]).toContain("data-cb 'card' has no binding");
+	});
+
+	it('does not warn when the binding is declared explicitly as null or undefined (intentional omission)', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		expect(template.fragment({ card: { nodes: { title: null } } }).querySelector('h1')).toBeNull();
+		expect(template.fragment({ card: {}, title: undefined }).querySelector('h1')).toBeNull();
+		expect(template.fragment({ card: null }).childNodes.length).toBe(0);
+
+		expect(warnSpy).not.toHaveBeenCalled();
+	});
+
+	it('does not warn when the nested data-cb is bound at an ancestor level', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		const fragment = template.fragment({ card: {}, title: { inner: 'Hi' } });
+
+		expect(fragment.querySelector('h1')?.textContent).toBe('Hi');
+		expect(warnSpy).not.toHaveBeenCalled();
+	});
+
+	it('does not warn when enableMissingBindingWarnings is disabled', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		ChispaDebugConfig.enableMissingBindingWarnings = false;
+
+		expect(template.fragment({ card: {} }).querySelector('h1')).toBeNull();
+		expect(warnSpy).not.toHaveBeenCalled();
+	});
+
+	it('restores the lookup stack when a builder throws, so later lookups do not see stale bindings', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const failing: any = {
+			fragment: (props: any) => {
+				const fragment = document.createDocumentFragment();
+				appendChild(fragment, getItem(failing, props, 'boom'));
+				return fragment;
+			},
+			boom: () => {
+				throw new Error('boom');
+			},
+		};
+
+		expect(() => failing.fragment({ boom: {}, title: { inner: 'stale' } })).toThrow('boom');
+
+		// Without cleanup, 'title' would be resolved from the failed build's leftover props
+		const fragment = template.fragment({ card: {} });
+		expect(fragment.querySelector('h1')).toBeNull();
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0][0]).toContain("data-cb 'title' has no binding");
+	});
+});
+
+describe('Inert reactivity warnings in bindings', () => {
+	const originalFlag = ChispaDebugConfig.enableInertReactivityWarnings;
+
+	beforeEach(() => {
+		ChispaDebugConfig.enableInertReactivityWarnings = true;
+	});
+
+	afterEach(() => {
+		ChispaDebugConfig.enableInertReactivityWarnings = originalFlag;
+		vi.restoreAllMocks();
+	});
+
+	it('warns when a function-valued prop reads no signal (the value should be passed directly)', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const div = document.createElement('div');
+
+		setProps(div, { title: () => 'static' });
+
+		expect(div.title).toBe('static');
+		expect(warnSpy).toHaveBeenCalledTimes(1);
+		expect(warnSpy.mock.calls[0][0]).toContain('computed did not read any signal');
+		expect(warnSpy.mock.calls[0][0]).toContain('static');
+	});
+
+	it('does not warn when the function-valued prop reads a signal', () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const title = signal('a');
+		const div = document.createElement('div');
+
+		setProps(div, { title: () => title.get() });
+
+		expect(div.title).toBe('a');
+		expect(warnSpy).not.toHaveBeenCalled();
 	});
 });

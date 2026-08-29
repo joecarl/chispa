@@ -1,4 +1,4 @@
-import { globalContext, Reactivity } from './context';
+import { globalContext, Reactivity, warnIfInertReactivity } from './context';
 
 type WithSignals<T> = { [K in keyof T]: Signal<T[K]> };
 
@@ -127,6 +127,7 @@ export function computed<T>(fn: () => T) {
 	globalContext.setCurrentReactivityContext(ctx);
 	sig = new ComputedSignal(fn);
 	globalContext.restorePreviousReactivityContext();
+	warnIfInertReactivity(ctx, 'computed', fn);
 
 	return sig as Signal<T>;
 }

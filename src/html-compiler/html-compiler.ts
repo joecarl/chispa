@@ -73,24 +73,8 @@ export class HtmlCompiler {
 			// Use JSON.stringify to properly escape newlines, quotes and other characters
 			const valueLiteral = JSON.stringify(attrValue);
 
-			// Simplified logic compared to PHP which had cbt.prefixize... calls
-			// Assuming we just output the value for now as I don't see cbt implementation here
-			// The PHP code imported CoreBuilderTools but here we might not have it.
-			// The user's example output imports from 'chispa'.
-			// I will stick to simple string values for now unless I see cbt in chispa.
-
 			if (attrName === 'style') {
-				// PHP called cbt.prefixizeStyle, but also had parse_style static method.
-				// Wait, the PHP code used cbt.prefixizeStyle inside get_html_node_attrs.
-				// But parse_style was defined but not used in the snippet I read?
-				// Ah, I should check if I should use parseStyle or just output string.
-				// The PHP code: $attrs_html .= " '$attr_name': cbt.prefixizeStyle('$attr_value'), ";
-				// If cbt is a runtime helper, I should output the call.
-				// But wait, the generated code imports CoreBuilderTools.
-				// Does 'chispa' export CoreBuilderTools?
-				// src/index.ts does NOT export CoreBuilderTools.
-				// It exports appendChild, getItem, etc.
-				// Maybe I should just output the string for now.
+				// TODO: PHP called cbt.prefixizeStyle, but also had parse_style static method.
 				attrsHtml += ` '${attrName}': ${valueLiteral}, `;
 			} else {
 				attrsHtml += ` '${attrName}': ${valueLiteral}, `;
