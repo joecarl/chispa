@@ -280,6 +280,7 @@ describe('Component Creation, Mounting, and Unmounting', () => {
 			}
 
 			// Mixed inserts, removals and reorders
+			// prettier-ignore
 			const steps = [
 				['a', 'b', 'c'],
 				['x', 'b', 'a'],

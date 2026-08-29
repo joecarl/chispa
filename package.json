@@ -6,6 +6,9 @@
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,
+	"engines": {
+		"node": ">=22.22.2"
+	},
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [
@@ -54,8 +57,12 @@
 	"scripts": {
 		"build": "tsdown",
 		"start": "echo \"Error: no dev mode available\" && exit 1",
+		"typecheck": "tsc --noEmit -p tsconfig.json",
+		"format:check": "prettier --check \"src/**/*.ts\" \"test/*.ts\" \"test/example/src/**/*.ts\" \"*.md\" package.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"verify:example": "cd test/example && npx tsc --noEmit -p tsconfig.json && npx vite build",
+		"verify": "npm run format:check && npm run typecheck && npm test && npm run build && npm run verify:example",
 		"prepublishOnly": "npm run build"
 	}
 }
