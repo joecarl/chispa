@@ -32,6 +32,10 @@ export type ChispaNodeBuilderPropsReactive<T, TNodes> = ChispaReactive<ChispaNod
 
 const forbiddenProps = ['nodes', 'inner', '_ref'];
 
+/**
+ * @internal Used by compiler-generated template code. Not part of the stable public
+ * API: ships in lockstep with the HTML compiler and may change in minor versions.
+ */
 export function getValidProps<T>(props: ChispaNodeBuilderProps<T, any>) {
 	const finalProps: any = {};
 
@@ -62,6 +66,10 @@ function isItemDeclaredInStack(itemName: string): boolean {
 	return itemsStack.some((itemsDefs) => itemsDefs !== null && typeof itemsDefs === 'object' && itemName in itemsDefs);
 }
 
+/**
+ * @internal Used by compiler-generated template code. Not part of the stable public
+ * API: ships in lockstep with the HTML compiler and may change in minor versions.
+ */
 export function getItem<T>(template: T, items: any, itemName: keyof T) {
 	itemsStack.unshift(items);
 	try {
@@ -91,6 +99,10 @@ export function getItem<T>(template: T, items: any, itemName: keyof T) {
 	}
 }
 
+/**
+ * @internal Used by compiler-generated template code. Not part of the stable public
+ * API: ships in lockstep with the HTML compiler and may change in minor versions.
+ */
 export function setAttributes(node: Element, attributes: Record<string, string>) {
 	for (const attr in attributes) {
 		const attrValue = attributes[attr];
@@ -114,6 +126,10 @@ function getPropValue(props: any, prop: string) {
 	return propValue;
 }
 
+/**
+ * @internal Used by compiler-generated template code. Not part of the stable public
+ * API: ships in lockstep with the HTML compiler and may change in minor versions.
+ */
 export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPropsReactive<T, any>) {
 	let _props = props;
 	if (typeof _props === 'function') {

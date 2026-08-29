@@ -41,7 +41,7 @@ npm install chispa
 
 ### Configuration (Vite)
 
-To use HTML templates you need to add the Chispa plugin to your `vite.config.ts`:
+To use HTML templates you need to add the Chispa plugin to your `vite.config.ts` (requires Vite 7 or newer, as the plugin relies on Vite's built-in Oxc transformer):
 
 ```typescript
 import { defineConfig } from 'vite';

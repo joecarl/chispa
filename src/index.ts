@@ -1,5 +1,5 @@
 export type { Signal, WritableSignal } from './signals';
-export { isSignal, isWriteableSignal, computed, signal, effect } from './signals';
+export { isSignal, isWritableSignal, computed, signal, effect } from './signals';
 export { globalContext } from './context';
 export { component, onUnmount, componentList } from './components';
 export type { Component, ComponentList, ComponentFactory } from './components';

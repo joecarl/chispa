@@ -97,7 +97,7 @@ export function isSignal(value: any): value is Signal<any> {
 	return value instanceof Signal;
 }
 
-export function isWriteableSignal<T>(value: Signal<T>): value is WritableSignal<T> {
+export function isWritableSignal<T>(value: Signal<T>): value is WritableSignal<T> {
 	return value instanceof WritableSignal;
 }
 

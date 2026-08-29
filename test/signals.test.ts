@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { signal, computed, effect, isSignal, isWriteableSignal, type Signal } from '../src/signals';
+import { signal, computed, effect, isSignal, isWritableSignal, type Signal } from '../src/signals';
 import { globalContext } from '../src/context';
 import { ChispaDebugConfig } from '../src/config';
 
@@ -36,7 +36,8 @@ describe('Signals', () => {
 		it('should correctly identify signals', () => {
 			const s = signal(10);
 			expect(isSignal(s)).toBe(true);
-			expect(isWriteableSignal(s)).toBe(true);
+			expect(isWritableSignal(s)).toBe(true);
+			expect(isWritableSignal(computed(() => s.get()))).toBe(false);
 			expect(isSignal({})).toBe(false);
 		});
 	});

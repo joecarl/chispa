@@ -255,4 +255,9 @@ export function warnIfInertReactivity(ctx: Reactivity, kind: 'computed' | 'effec
 	);
 }
 
+/**
+ * Engine context singleton. Only `createRoot(component, mountPoint)` and
+ * `maxScheduleIterations` are part of the stable public API; every other member is
+ * internal plumbing shared with the compiler and may change in minor versions.
+ */
 export const globalContext = new AppContext();

@@ -1,4 +1,5 @@
 import { ChispaContent } from './builder';
+import { ChispaDebugConfig } from './config';
 import { globalContext, IDisposable } from './context';
 import { computed, Signal, WritableSignal } from './signals';
 
@@ -14,8 +15,6 @@ export class Component<TProps extends Dict = any> {
 
 	private disposables: IDisposable[] = [];
 
-	public silent = true;
-
 	constructor(
 		private readonly factoryFn: ComponentFactory<TProps>,
 		public readonly key: any = null,
@@ -23,7 +22,7 @@ export class Component<TProps extends Dict = any> {
 	) {}
 
 	mount(container: Node, anchor: Node | null = null) {
-		if (!this.silent) console.log('Mounting Component', this);
+		if (ChispaDebugConfig.enableMountLogging) console.log('Mounting Component', this);
 
 		this.container = container;
 		this.anchor = anchor;
@@ -78,7 +77,7 @@ export class Component<TProps extends Dict = any> {
 	}
 
 	unmount() {
-		if (!this.silent) console.log('Unmounting Component', this);
+		if (ChispaDebugConfig.enableMountLogging) console.log('Unmounting Component', this);
 
 		if (this.nodes) {
 			this.nodes.forEach((node) => {
@@ -126,7 +125,7 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 	private container: Node | null = null; // Contenedor donde se montan los nodos
 	private anchor: Node | null = null; // Nodes must be inserted before this node
 	private ownAnchor: Node | null = null; // Anchor created by this list when mounted without one
-	public disposables: any[] = [];
+	private disposables: IDisposable[] = [];
 
 	constructor(
 		private readonly itemFactoryFn: ItemFactoryFn<TItem, TProps>,
