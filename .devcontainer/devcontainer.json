@@ -9,5 +9,8 @@
 			]
 		}
 	},
+	"mounts": [
+		"source=${localEnv:HOME}/,target=/host-home,type=bind"
+	],
 	"postCreateCommand": "npm install"
 }
