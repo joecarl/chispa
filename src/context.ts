@@ -1,5 +1,5 @@
 import { Component, ComponentList } from './components';
-import { ChispaDebugConfig } from './config';
+import { ChispaConfig, ChispaDebugConfig } from './config';
 import { Signal } from './signals';
 
 type ExecutionKind = 'createComponent' | 'computed' | 'addReactivity';
@@ -97,12 +97,6 @@ class AppContext {
 		return stack[stack.length - 1];
 	}
 
-	// Maximum number of iterations to process during a scheduled refresh. Prevents
-	// unbounded loops in case of uncontrolled reactivity cascades. Use the
-	// `globalContext.maxScheduleIterations` field to override in tests or
-	// special cases.
-	public maxScheduleIterations = 100;
-
 	scheduleRefresh() {
 		if (this.refreshTimeout) {
 			clearTimeout(this.refreshTimeout);
@@ -110,9 +104,9 @@ class AppContext {
 		this.refreshTimeout = setTimeout(() => {
 			let iteration = 0;
 			// Process dirty contexts until none remain, or until the iteration limit
-			// is reached (this avoids infinite loops when reactivities keep
-			// re-adding themselves or each other).
-			while (this.dirtyReactivities.size > 0 && iteration < this.maxScheduleIterations) {
+			// (`ChispaConfig.maxScheduleIterations`) is reached: this avoids infinite
+			// loops when reactivities keep re-adding themselves or each other.
+			while (this.dirtyReactivities.size > 0 && iteration < ChispaConfig.maxScheduleIterations) {
 				iteration++;
 				const dirtyContexts = Array.from(this.dirtyReactivities);
 				dirtyContexts.forEach((ctx) => ctx.process());
@@ -135,13 +129,6 @@ class AppContext {
 		globalContext.popExecutionStack();
 		warnIfInertReactivity(ctx, 'effect', executor);
 		return ctx;
-	}
-
-	createRoot(component: () => Component, mountPoint: HTMLElement) {
-		this.dirtyReactivities.clear();
-		mountPoint.innerHTML = '';
-		const cmp = component();
-		cmp.mount(mountPoint, null);
 	}
 
 	canReadSignal() {
@@ -256,8 +243,24 @@ export function warnIfInertReactivity(ctx: Reactivity, kind: 'computed' | 'effec
 }
 
 /**
- * Engine context singleton. Only `createRoot(component, mountPoint)` and
- * `maxScheduleIterations` are part of the stable public API; every other member is
- * internal plumbing shared with the compiler and may change in minor versions.
+ * Mounts `component` as the root of an application: empties `mountPoint` (so it can
+ * hold a static placeholder such as "Loading…" until the app takes over), mounts the
+ * component inside it and returns it. Call `unmount()` on the returned component to
+ * tear the application down.
+ *
+ * This is the application entry point; to insert a component into an element without
+ * touching its existing content use `appendChild` instead. Mounting a root never
+ * discards updates already scheduled by other roots or by module-level effects.
+ */
+export function mountRoot(component: Component, mountPoint: Element): Component {
+	mountPoint.innerHTML = '';
+	component.mount(mountPoint, null);
+	return component;
+}
+
+/**
+ * Engine context singleton shared by the runtime modules. Internal: it is not exported
+ * from the package entry point. Applications mount with `mountRoot` and tune the
+ * scheduler through `ChispaConfig`.
  */
 export const globalContext = new AppContext();

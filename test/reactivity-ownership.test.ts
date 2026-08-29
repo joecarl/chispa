@@ -2,8 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { component, signal, appendChild, setProps, inject, resetServices } from '../src';
-import { globalContext } from '../src/context';
+import { component, signal, appendChild, setProps, inject, resetServices, mountRoot } from '../src';
 
 describe('Reactivity ownership', () => {
 	beforeEach(() => {
@@ -37,7 +36,7 @@ describe('Reactivity ownership', () => {
 
 		const root = document.createElement('div');
 		document.body.appendChild(root);
-		globalContext.createRoot(() => Root(), root);
+		mountRoot(Root(), root);
 		await vi.runOnlyPendingTimersAsync();
 
 		const subscribers = () => (data as any).contexts.size;
@@ -70,7 +69,7 @@ describe('Reactivity ownership', () => {
 
 		const root = document.createElement('div');
 		document.body.appendChild(root);
-		globalContext.createRoot(() => Root(), root);
+		mountRoot(Root(), root);
 		await vi.runOnlyPendingTimersAsync();
 
 		const subscribers = () => (color as any).contexts.size;

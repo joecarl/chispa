@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { ChispaDebugConfig, enableDevDebugging } from '../src/config';
+import { ChispaDebugConfig, enableDebugging } from '../src/config';
 
 describe('ChispaDebugConfig', () => {
 	// Snapshot taken before any test touches the flags (vitest isolates each test file)
@@ -16,9 +16,9 @@ describe('ChispaDebugConfig', () => {
 		}
 	});
 
-	describe('enableDevDebugging()', () => {
+	describe('enableDebugging()', () => {
 		it('enables the reliable warnings and leaves the noisy diagnostics off', () => {
-			enableDevDebugging();
+			enableDebugging();
 
 			expect(ChispaDebugConfig.enableMissingBindingWarnings).toBe(true);
 			expect(ChispaDebugConfig.enableInertReactivityWarnings).toBe(true);
@@ -27,7 +27,7 @@ describe('ChispaDebugConfig', () => {
 		});
 
 		it('applies overrides on top of what it enables', () => {
-			enableDevDebugging({ enableMountLogging: true, enableInertReactivityWarnings: false });
+			enableDebugging({ enableMountLogging: true, enableInertReactivityWarnings: false });
 
 			expect(ChispaDebugConfig.enableMountLogging).toBe(true);
 			expect(ChispaDebugConfig.enableInertReactivityWarnings).toBe(false);
@@ -37,7 +37,7 @@ describe('ChispaDebugConfig', () => {
 
 		it('mutates the shared config object rather than replacing it', () => {
 			const ref = ChispaDebugConfig;
-			enableDevDebugging();
+			enableDebugging();
 			expect(ref.enableMissingBindingWarnings).toBe(true);
 		});
 	});

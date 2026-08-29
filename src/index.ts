@@ -1,6 +1,6 @@
 export type { Signal, WritableSignal } from './signals';
 export { isSignal, isWritableSignal, computed, signal, effect } from './signals';
-export { globalContext } from './context';
+export { mountRoot } from './context';
 export { component, onUnmount, componentList } from './components';
 export type { Component, ComponentList, ComponentFactory } from './components';
 export { appendChild, getItem, getValidProps, setAttributes, setProps } from './builder';
@@ -9,5 +9,5 @@ export type { SelectOption, InputValueType, ControlledInputOptions } from './con
 export { bindControlledInput, bindControlledSelect, bindControlledCheckbox, refBindInput, refBindCheckbox, refBindSelect } from './controlled-input';
 export { Router, Link, navigate, pathMatches } from './router';
 export type { Route, LinkProps } from './router';
-export { ChispaDebugConfig, enableDevDebugging } from './config';
+export { ChispaConfig, ChispaDebugConfig, enableDebugging } from './config';
 export { inject, provide, resetServices, InjectionToken } from './injection';

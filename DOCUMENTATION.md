@@ -82,7 +82,7 @@ Because a reactivity that read no signal can never run again, Chispa warns as so
 [chispa] computed did not read any signal on its first evaluation, so it will never re-run: () => sibling.current ? sibling.current.invalid.get() : false. If it must react to state, read the signals it depends on unconditionally (also on the first run); if the value is constant, pass it directly instead of a function.
 ```
 
-The warning also flags constant functions such as `inner: () => 'Hello'` or `classes: { active: () => true }`: they create a reactivity that will never fire, so pass the value itself (`inner: 'Hello'`). Only the first evaluation is checked; a reactivity that stops reading signals on a later run is left alone. The warning is controlled by `ChispaDebugConfig.enableInertReactivityWarnings`, off by default and turned on by `enableDevDebugging()` (see [Debugging](#debugging-chispadebugconfig)).
+The warning also flags constant functions such as `inner: () => 'Hello'` or `classes: { active: () => true }`: they create a reactivity that will never fire, so pass the value itself (`inner: 'Hello'`). Only the first evaluation is checked; a reactivity that stops reading signals on a later run is left alone. The warning is controlled by `ChispaDebugConfig.enableInertReactivityWarnings`, off by default and turned on by `enableDebugging()` (see [Debugging](#debugging-chispadebugconfig)).
 
 ### 2. Components
 
@@ -243,12 +243,12 @@ If a `data-cb` has no binding at any level, **the element is not rendered**: its
 
 - To render the element exactly as it is in the HTML, bind it to an empty object: `timeline: {}`.
 - If the omission is intentional (you do not want that element in this instance), declare it explicitly: `timeline: null`. The warning is only emitted when the key is not declared at any level; an explicit `null`/`undefined` value is treated as a decision and does not warn.
-- The warning is controlled by `ChispaDebugConfig.enableMissingBindingWarnings`, off by default and turned on by `enableDevDebugging()` (see [Debugging](#debugging-chispadebugconfig)):
+- The warning is controlled by `ChispaDebugConfig.enableMissingBindingWarnings`, off by default and turned on by `enableDebugging()` (see [Debugging](#debugging-chispadebugconfig)):
 
 ```typescript
-import { enableDevDebugging } from 'chispa';
+import { enableDebugging } from 'chispa';
 
-if (import.meta.env.DEV) enableDevDebugging();
+if (import.meta.env.DEV) enableDebugging();
 ```
 
 ### Real node reference (`_ref`)
@@ -312,7 +312,7 @@ await vi.runOnlyPendingTimersAsync();
 expect(span.textContent).toBe('1');
 ```
 
-As a guard against runaway cascades (reactivities that keep marking each other endlessly), a refresh is aborted with a console warning after `globalContext.maxScheduleIterations` iterations (100 by default).
+As a guard against runaway cascades (reactivities that keep marking each other endlessly), a refresh is aborted with a console warning after `ChispaConfig.maxScheduleIterations` iterations (100 by default).
 
 ## Dependency injection (`provide` / `inject`)
 
@@ -390,21 +390,21 @@ Create the context inside the parent component's function (as in the example): e
 All development diagnostics are **off by default**, so a production bundle never logs anything unless asked to. The recommended way to turn them on is a single call at application start, guarded by your bundler's development flag so that production builds drop it entirely (Chispa itself does not detect the environment):
 
 ```typescript
-import { enableDevDebugging } from 'chispa';
+import { enableDebugging } from 'chispa';
 
-if (import.meta.env.DEV) enableDevDebugging();
+if (import.meta.env.DEV) enableDebugging();
 ```
 
-`enableDevDebugging()` enables the warnings that are reliable in any application: `enableMissingBindingWarnings` and `enableInertReactivityWarnings`. The noisier diagnostics stay off unless you pass them explicitly, e.g. `enableDevDebugging({ enableMountLogging: true })`. In particular `enableReactivityWarnings` reports every reactivity created outside a component, which by design includes the effects that services obtained with `inject` set up in their constructors.
+`enableDebugging()` enables the warnings that are reliable in any application: `enableMissingBindingWarnings` and `enableInertReactivityWarnings`. The noisier diagnostics stay off unless you pass them explicitly, e.g. `enableDebugging({ enableMountLogging: true })`. In particular `enableReactivityWarnings` reports every reactivity created outside a component, which by design includes the effects that services obtained with `inject` set up in their constructors.
 
 For finer control, `ChispaDebugConfig` is a mutable object that can be changed at any time:
 
-| Property                        | Default | Effect                                                                                                                                                                                                                    |
-| ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enableMissingBindingWarnings`  | `false` | Warns when a `data-cb` has no binding at any level and is therefore not rendered. Enabled by `enableDevDebugging()`. See [Unbound `data-cb`](#unbound-data-cb).                                                           |
-| `enableInertReactivityWarnings` | `false` | Warns when a `computed`, `effect` or function-valued binding reads no signal on its first evaluation and will therefore never re-run. Enabled by `enableDevDebugging()`. See [Dependency tracking](#dependency-tracking). |
-| `enableReactivityWarnings`      | `false` | Warns when a reactivity (`computed`, `effect`, binding) is created outside of any component or reactive scope; useful to find subscriptions that will never be released.                                                  |
-| `enableMountLogging`            | `false` | Logs every component mount and unmount to the console, together with the component instance (nodes, key, props), to follow the lifecycle of a tree.                                                                       |
+| Property                        | Default | Effect                                                                                                                                                                                                                 |
+| ------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enableMissingBindingWarnings`  | `false` | Warns when a `data-cb` has no binding at any level and is therefore not rendered. Enabled by `enableDebugging()`. See [Unbound `data-cb`](#unbound-data-cb).                                                           |
+| `enableInertReactivityWarnings` | `false` | Warns when a `computed`, `effect` or function-valued binding reads no signal on its first evaluation and will therefore never re-run. Enabled by `enableDebugging()`. See [Dependency tracking](#dependency-tracking). |
+| `enableReactivityWarnings`      | `false` | Warns when a reactivity (`computed`, `effect`, binding) is created outside of any component or reactive scope; useful to find subscriptions that will never be released.                                               |
+| `enableMountLogging`            | `false` | Logs every component mount and unmount to the console, together with the component instance (nodes, key, props), to follow the lifecycle of a tree.                                                                    |
 
 ## API Reference
 
@@ -420,15 +420,28 @@ Reactivity primitives. Type guards: `isSignal(value)` and `isWritableSignal(sign
 
 Creates an optimized list component. Returns a function that accepts a `WritableSignal<T[]>`.
 
+### `mountRoot(component, mountPoint)`
+
+Mounts the application. Empties `mountPoint` (so it can hold a static placeholder until the app takes over), mounts `component` inside it and returns the component; call its `unmount()` to tear the application down. Mounting a root never discards updates already scheduled by other roots or by module-level effects.
+
+```typescript
+import { mountRoot } from 'chispa';
+import { App } from './app';
+
+const app = mountRoot(App(), document.getElementById('app')!);
+// Later, e.g. from a test or when the host page removes the widget:
+app.unmount();
+```
+
 ### `appendChild(parent, child)`
 
-Utility to mount the application or components manually.
+Inserts `child` (a node, text, component, array, signal or function) into `parent` without emptying it. Use it to mount components by hand next to existing content; for the application entry point prefer `mountRoot`.
 
 ```typescript
 import { appendChild } from 'chispa';
-import { App } from './app';
+import { Widget } from './widget';
 
-appendChild(document.body, App());
+appendChild(document.querySelector('#sidebar')!, Widget());
 ```
 
 ### `bindControlledInput(element, signal, options?)`
@@ -439,14 +452,20 @@ Binds an input or textarea to a signal in a controlled way. Supports `transform`
 
 Global service container. See [Dependency injection](#dependency-injection-provide--inject).
 
-### `ChispaDebugConfig` / `enableDevDebugging(overrides?)`
+### `ChispaDebugConfig` / `enableDebugging(overrides?)`
 
-Engine development diagnostics, all off by default; `enableDevDebugging()` turns on the reliable ones in a single call. See [Debugging](#debugging-chispadebugconfig).
+Engine development diagnostics, all off by default; `enableDebugging()` turns on the reliable ones in a single call. See [Debugging](#debugging-chispadebugconfig).
 
-### `globalContext`
+### `ChispaConfig`
 
-Engine context singleton. Only two members are part of the public API: `createRoot(component, mountPoint)`, which empties `mountPoint` and mounts the component there, and `maxScheduleIterations` (see [Update model](#update-model-asynchronous-batched-refresh)). Its other methods are internal plumbing and may change in minor versions.
+Engine settings, mutable like `ChispaDebugConfig`. Its only field is `maxScheduleIterations` (100 by default): the number of passes a refresh may run before it is aborted as a runaway cascade (see [Update model](#update-model-asynchronous-batched-refresh)). Set it before mounting; raising it is only warranted when a legitimate cascade needs more passes.
+
+```typescript
+import { ChispaConfig } from 'chispa';
+
+ChispaConfig.maxScheduleIterations = 200;
+```
 
 ### Internal exports
 
-`getItem`, `getValidProps`, `setAttributes` and `setProps` are exported because the code generated by the HTML compiler imports them. They are **not** part of the stable public API: they ship in lockstep with the compiler and may change in minor versions. Build on `component`, `appendChild`, the template builders and the primitives above instead.
+`getItem`, `getValidProps`, `setAttributes` and `setProps` are exported because the code generated by the HTML compiler imports them. They are **not** part of the stable public API: they ship in lockstep with the compiler and may change in minor versions. Build on `component`, `mountRoot`, `appendChild`, the template builders and the primitives above instead.

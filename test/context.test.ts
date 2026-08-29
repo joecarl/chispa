@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { globalContext } from '../src/context';
 import { signal } from '../src/signals';
+import { ChispaConfig } from '../src/config';
 
 describe('AppContext.scheduleRefresh', () => {
 	beforeEach(() => {
@@ -16,11 +17,15 @@ describe('AppContext.scheduleRefresh', () => {
 		// noop helper in case we add spies; kept for symmetry
 	}
 
+	it('defaults to 100 iterations', () => {
+		expect(ChispaConfig.maxScheduleIterations).toBe(100);
+	});
+
 	it('should warn and stop after exceeding max iterations', async () => {
 		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		// make iterations small for test speed/reliability
-		const original = globalContext.maxScheduleIterations;
-		globalContext.maxScheduleIterations = 5;
+		const original = ChispaConfig.maxScheduleIterations;
+		ChispaConfig.maxScheduleIterations = 5;
 
 		// Two reactivities that keep marking each other dirty: every refresh iteration
 		// leaves the other one pending, so the loop can only stop at the iteration limit.
@@ -40,6 +45,6 @@ describe('AppContext.scheduleRefresh', () => {
 		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('possible uncontrolled reactivity cascade'));
 		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('processed 5 iterations'));
 		warnSpy.mockRestore();
-		globalContext.maxScheduleIterations = original;
+		ChispaConfig.maxScheduleIterations = original;
 	});
 });
