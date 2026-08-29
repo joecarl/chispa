@@ -28,15 +28,15 @@
 		"url": "git+https://github.com/joecarl/chispa.git"
 	},
 	"dependencies": {
-		"jsdom": "^29.0.2",
-		"prettier": "^3.7.4"
+		"jsdom": "^30.0.1",
+		"prettier": "^3.9.6"
 	},
 	"devDependencies": {
-		"@types/jsdom": "^28.0.1",
-		"tsdown": "^0.22.13",
-		"typescript": "^6.0.2",
-		"vite": "^8.0.8",
-		"vitest": "^4.1.4"
+		"@types/jsdom": "^30.0.0",
+		"tsdown": "^0.22.14",
+		"typescript": "^7.0.2",
+		"vite": "^8.2.2",
+		"vitest": "^4.1.11"
 	},
 	"bugs": {
 		"url": "https://github.com/joecarl/chispa/issues"

@@ -57,13 +57,8 @@ Para que el tipado funcione correctamente también es necesario agregar esto en 
 ```json
 {
 	"compilerOptions": {
-		// ...
-		"rootDirs": [
-			// ...
-			".chispa/types"
-		]
+		"rootDirs": [".chispa/types"]
 	}
-	// ...
 }
 ```
 
