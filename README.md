@@ -18,7 +18,7 @@ The result is an engine focused on **absolute simplicity and clean code**. It is
 - **Single-pass TS/JS**: Component functions run once (setup), eliminating ephemeral-state problems on every render.
 - **Precise signal → DOM bindings**: Atomic updates without tree-diffing heuristics.
 - **Embeddable engine**: No imposed architecture; perfect both for full applications and for embedding in existing systems.
-- **Lightweight**: No runtime dependencies.
+- **Lightweight**: Zero dependencies in the browser runtime (~28 KB unminified). `jsdom` and `prettier` are used only by the HTML compiler at build time and never reach your bundle.
 - **Vite integration**: Ships a Vite plugin for a smooth development experience.
 
 ## Create a new project
