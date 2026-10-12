@@ -144,7 +144,8 @@ export function setProps<T extends Element>(node: T, props: ChispaNodeBuilderPro
 
 	props = getValidProps(_props);
 
-	if (node instanceof HTMLElement) {
+	// SVG elements also have classList, style and dataset, so they take the special props too
+	if (node instanceof HTMLElement || node instanceof SVGElement) {
 		setSpecialProps(node, props);
 	}
 
@@ -168,7 +169,7 @@ function parseAddClassProp(value: string | string[]): string[] {
 	return arr.filter((c) => c.trim() !== '');
 }
 
-function setSpecialProps<T extends HTMLElement>(node: T, props: INodeBuilderSpecialProps) {
+function setSpecialProps<T extends HTMLElement | SVGElement>(node: T, props: INodeBuilderSpecialProps) {
 	if (props.style !== undefined) {
 		const style = props.style;
 		for (const styleKey in style) {

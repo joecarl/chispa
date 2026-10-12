@@ -224,6 +224,50 @@ describe('Builder Props: reactive props', () => {
 	});
 });
 
+describe('Builder Props: SVG elements', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('should apply addClass, classes, style and dataset to an SVG element', async () => {
+		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		const active = signal(false);
+		const color = signal('red');
+
+		setProps(svg, {
+			addClass: 'icon',
+			classes: { active: active },
+			style: { fill: color },
+			dataset: { kind: 'logo' },
+		});
+
+		expect(svg.classList.contains('icon')).toBe(true);
+		expect(svg.classList.contains('active')).toBe(false);
+		expect(svg.style.fill).toBe('red');
+		expect(svg.dataset.kind).toBe('logo');
+		// Special props must be consumed, not assigned as plain properties
+		expect((svg as any).classes).toBeUndefined();
+
+		active.set(true);
+		color.set('blue');
+		await vi.runOnlyPendingTimersAsync();
+		expect(svg.classList.contains('active')).toBe(true);
+		expect(svg.style.fill).toBe('blue');
+	});
+
+	it('should apply special props to elements nested inside an SVG', () => {
+		const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+		setProps(circle, { classes: { highlighted: true }, dataset: { id: '7' } });
+
+		expect(circle.classList.contains('highlighted')).toBe(true);
+		expect(circle.dataset.id).toBe('7');
+	});
+});
+
 describe('getItem: missing binding warnings', () => {
 	// Mirrors what the html-compiler emits for:
 	// <div data-cb="card"><h1 data-cb="title"></h1></div>

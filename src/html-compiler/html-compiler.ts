@@ -167,10 +167,10 @@ export class HtmlCompiler {
 				}
 
 				htmlNodeCode += `return node;})()`;
+			}
 
-				if (tagName === 'svg') {
-					this.inSvgContext--;
-				}
+			if (tagName === 'svg') {
+				this.inSvgContext--;
 			}
 		} else if (domNode.nodeType === 3) {
 			// Text
