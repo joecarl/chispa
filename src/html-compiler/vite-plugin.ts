@@ -1,5 +1,5 @@
 import { HtmlCompiler } from './html-compiler';
-import { generateTypes, findAndCompileHtmlFiles } from './generator';
+import { generateTypes, findAndCompileHtmlFiles, isExcluded } from './generator';
 import { type Plugin, transformWithOxc } from 'vite';
 import * as fs from 'fs';
 
@@ -18,8 +18,20 @@ const fromVirtualId = (id: string) => id.replace(/^\0/, '').replace(/\.chispa\.t
 
 const CHISPA_VIRTUAL_MODULE_SUFFIX = '.html.chispa.ts';
 
-export function chispaHtmlPlugin(): Plugin {
+export interface ChispaHtmlPluginOptions {
+	/**
+	 * Paths, relative to the Vite root, whose `.html` files are not compiled into
+	 * `.chispa/types` when the project is scanned (directories or single files, e.g.
+	 * `['public', 'docs/legacy.html']`). `node_modules`, `.git`, `dist` and `.chispa`
+	 * are always skipped. An excluded file can still be imported from TypeScript: it is
+	 * then compiled on demand like any other.
+	 */
+	exclude?: string[];
+}
+
+export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin {
 	let rootDir = process.cwd();
+	const exclude = options.exclude ?? [];
 
 	return {
 		name: 'chispa-html',
@@ -28,12 +40,14 @@ export function chispaHtmlPlugin(): Plugin {
 			rootDir = config.root;
 		},
 		async buildStart() {
-			await findAndCompileHtmlFiles(rootDir, rootDir);
+			await findAndCompileHtmlFiles(rootDir, rootDir, exclude);
 		},
 		async handleHotUpdate(ctx) {
 			if (ctx.file.endsWith('.html')) {
-				const content = await ctx.read();
-				await generateTypes(ctx.file, content, rootDir);
+				if (!isExcluded(ctx.file, rootDir, exclude)) {
+					const content = await ctx.read();
+					await generateTypes(ctx.file, content, rootDir);
+				}
 
 				// Buscamos el módulo virtual asociado al archivo HTML modificado.
 				const module = ctx.server.moduleGraph.getModuleById(toVirtualId(ctx.file));
