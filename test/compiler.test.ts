@@ -82,6 +82,48 @@ describe('HTML Compiler', () => {
 		expect(ts).toContain(`document.createElement('p')`);
 	});
 
+	it('should reject a duplicated data-cb instead of silently keeping the last one', async () => {
+		const compiler = new HtmlCompiler(`<div data-cb="box">first</div><span data-cb="box">second</span>`);
+		await expect(compiler.compile()).rejects.toThrow('Duplicate data-cb "box"');
+	});
+
+	it('should reject a duplicated data-cb nested inside the first occurrence', async () => {
+		const compiler = new HtmlCompiler(`<div data-cb="box"><span data-cb="box">inner</span></div>`);
+		await expect(compiler.compile()).rejects.toThrow('Duplicate data-cb "box"');
+	});
+
+	it('should reject two data-cb that camelize to the same builder name', async () => {
+		const compiler = new HtmlCompiler(`<div data-cb="my-box"></div><div data-cb="myBox"></div>`);
+		await expect(compiler.compile()).rejects.toThrow('Duplicate data-cb "myBox" (builder "myBox")');
+	});
+
+	it('should reject data-cb="fragment", which is reserved for the whole-template builder', async () => {
+		const compiler = new HtmlCompiler(`<div data-cb="fragment"></div>`);
+		await expect(compiler.compile()).rejects.toThrow('reserved');
+	});
+
+	it('should keep table elements at the root of a template (e.g. a <tr data-cb> row template)', async () => {
+		const compiler = new HtmlCompiler(`<tr data-cb="row"><td data-cb="cell">x</td><td>static</td></tr>`);
+		const { ts, dts } = await compiler.compile();
+
+		expect(ts).toContain('row:');
+		expect(ts).toContain('cell:');
+		expect(ts).toContain(`document.createElement('tr')`);
+		expect(ts).toContain(`document.createElement('td')`);
+		expect(dts).toContain(`HTMLElementTagNameMap['tr']`);
+		expect(dts).toContain(`HTMLElementTagNameMap['td']`);
+		expect(dts).toMatch(/interface CbFragmentProps \{\s*row\?:/);
+	});
+
+	it('should still compile text and elements at the root as before', async () => {
+		const compiler = new HtmlCompiler(`hello <b data-cb="bold">world</b> !`);
+		const { ts } = await compiler.compile();
+
+		expect(ts).toContain(`document.createTextNode('hello ')`);
+		expect(ts).toContain(`document.createTextNode(' !')`);
+		expect(ts).toContain('bold:');
+	});
+
 	it('preserves newline entities in attribute values (e.g. placeholder with &#10;)', async () => {
 		const htmlContent = `<textarea placeholder="Linea1&#10;Linea2"></textarea>`;
 		const compiler = new HtmlCompiler(htmlContent);

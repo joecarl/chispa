@@ -7,16 +7,22 @@ const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
 export class HtmlCompiler {
 	private components: Record<string, string> = {};
+	private cbids = new Set<string>(); // camelized data-cb names seen so far, to reject duplicates
 	private stack: string[] = ['fragment'];
 	private componentsItems: Record<string, string[]> = {};
 	private componentsTags: Record<string, string> = {};
 	private isSvg: Record<string, boolean> = {};
 	private inSvgContext = 0;
-	private htmlDocument: Document;
+	private root: DocumentFragment;
 
 	constructor(htmlContent: string) {
-		const dom = new JSDOM(htmlContent);
-		this.htmlDocument = dom.window.document;
+		// Parse as <template> content: in body context the HTML parser silently drops
+		// elements that only make sense inside a parent (a root <tr>, <td>, <tbody>...),
+		// while the "in template" insertion mode keeps them, as a partial template needs.
+		const dom = new JSDOM(`<template>${htmlContent}</template>`);
+		const template = dom.window.document.querySelector('template');
+		if (!template) throw new Error('Not valid HTML');
+		this.root = template.content;
 	}
 
 	private static camelize(str: string): string {
@@ -102,7 +108,17 @@ export class HtmlCompiler {
 			if (cbid) {
 				const currComp = this.stack[0];
 				element.removeAttribute('data-cb');
+				const rawCbid = cbid;
 				cbid = HtmlCompiler.camelize(cbid);
+				// A repeated name would silently overwrite the previous builder (and render
+				// the last element in every position), so fail at compile time instead.
+				if (cbid === 'fragment') {
+					throw new Error(`data-cb "${rawCbid}" is reserved: "fragment" is the builder of the whole template.`);
+				}
+				if (this.cbids.has(cbid)) {
+					throw new Error(`Duplicate data-cb "${rawCbid}" (builder "${cbid}"): every data-cb in a template must be unique.`);
+				}
+				this.cbids.add(cbid);
 				// Pushear a todos los padres
 				for (const comp of this.stack) {
 					if (!this.componentsItems[comp]) {
@@ -175,8 +191,9 @@ export class HtmlCompiler {
 		} else if (domNode.nodeType === 3) {
 			// Text
 			const textNode = domNode as Text;
-			const parent = textNode.parentNode as Element;
-			const parentTag = parent ? parent.tagName.toLowerCase() : '';
+			const parent = textNode.parentNode as Element | null;
+			// At the root the parent is the DocumentFragment, which has no tagName
+			const parentTag = parent && parent.tagName ? parent.tagName.toLowerCase() : '';
 
 			const mustOmit = ['table', 'thead', 'tbody', 'tfoot', 'tr'].includes(parentTag);
 
@@ -204,12 +221,9 @@ export class HtmlCompiler {
 	}
 
 	private createAllComponents() {
-		const body = this.htmlDocument.querySelector('body');
-		if (!body) throw new Error('Not valid HTML');
-
 		let rendererJsx = '(() => { const fragment = document.createDocumentFragment();\n';
 
-		body.childNodes.forEach((child) => {
+		this.root.childNodes.forEach((child) => {
 			const chCode = this.buildTsForNode(child);
 			if (chCode) {
 				rendererJsx += `appendChild(fragment, ${chCode});\n`;
