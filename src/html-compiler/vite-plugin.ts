@@ -2,19 +2,25 @@ import { HtmlCompiler } from './html-compiler';
 import { generateTypes, findAndCompileHtmlFiles, isExcluded } from './generator';
 import { type Plugin, transformWithOxc } from 'vite';
 import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Convierte una ruta real de archivo en el ID de módulo virtual que usa Vite/Rollup.
  * Añade el prefijo `\0` para marcar el módulo como virtual y el sufijo
  * `.chispa.ts` para que sea tratado como módulo TypeScript.
+ *
+ * El ID se construye con la ruta relativa al root (con `/` como separador): Rollup
+ * convierte los IDs de los módulos virtuales en nombres de fichero cuando se compila
+ * una librería con `preserveModules`, y una ruta absoluta acabaría metiendo la ruta
+ * de la máquina dentro de `dist`.
  */
-const toVirtualId = (id: string) => '\0' + id + '.chispa.ts';
+export const toVirtualId = (file: string, rootDir: string) => '\0' + path.relative(rootDir, file).split(path.sep).join('/') + '.chispa.ts';
 
 /**
- * Convierte un ID de módulo virtual de vuelta a la ruta real del archivo.
+ * Convierte un ID de módulo virtual de vuelta a la ruta real (absoluta) del archivo.
  * Elimina el prefijo `\0` (si existe) y el sufijo `.chispa.ts`.
  */
-const fromVirtualId = (id: string) => id.replace(/^\0/, '').replace(/\.chispa\.ts$/, '');
+export const fromVirtualId = (id: string, rootDir: string) => path.resolve(rootDir, id.replace(/^\0/, '').replace(/\.chispa\.ts$/, ''));
 
 const CHISPA_VIRTUAL_MODULE_SUFFIX = '.html.chispa.ts';
 
@@ -50,7 +56,7 @@ export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin 
 				}
 
 				// Buscamos el módulo virtual asociado al archivo HTML modificado.
-				const module = ctx.server.moduleGraph.getModuleById(toVirtualId(ctx.file));
+				const module = ctx.server.moduleGraph.getModuleById(toVirtualId(ctx.file, rootDir));
 				if (module) {
 					return [module];
 				}
@@ -63,7 +69,7 @@ export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin 
 			if (source.endsWith('.html') && importer) {
 				const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
 				if (resolution && !resolution.external) {
-					return toVirtualId(resolution.id);
+					return toVirtualId(resolution.id, rootDir);
 				}
 			}
 			return null;
@@ -71,7 +77,7 @@ export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin 
 		async load(id) {
 			if (!id.endsWith(CHISPA_VIRTUAL_MODULE_SUFFIX)) return null;
 
-			const realId = fromVirtualId(id);
+			const realId = fromVirtualId(id, rootDir);
 			this.addWatchFile(realId); // To ensure changes in the HTML file trigger a rebuild in watch mode.
 			try {
 				const content = fs.readFileSync(realId, 'utf-8');
@@ -81,7 +87,7 @@ export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin 
 
 				const compiler = new HtmlCompiler(content);
 				const { ts } = await compiler.compile();
-				generateTypes(realId, content, rootDir);
+				await generateTypes(realId, content, rootDir);
 
 				const result = await transformWithOxc(ts, realId + '.ts');
 				return result.code;
