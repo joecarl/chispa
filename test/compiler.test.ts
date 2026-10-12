@@ -40,6 +40,17 @@ describe('HTML Compiler', () => {
 		// fs.writeFileSync(htmlPath + '.generated.d.ts', dts);
 	});
 
+	it('should export the template prop types, so declaration emit of modules exposing the template can name them', async () => {
+		const htmlContent = `<div data-cb="box"><span data-cb="label">Hi</span></div>`;
+		const compiler = new HtmlCompiler(htmlContent);
+		const { dts } = await compiler.compile();
+
+		expect(dts).toContain('export type CbBoxProps');
+		expect(dts).toContain('export type CbLabelProps');
+		expect(dts).toContain('export interface CbFragmentProps');
+		expect(dts).toContain('export default template');
+	});
+
 	it('should not leak the SVG context of an <svg data-cb> into the following elements', async () => {
 		const htmlContent = `
 			<svg data-cb="icon" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"></circle></svg>

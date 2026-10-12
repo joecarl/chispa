@@ -234,13 +234,13 @@ export class HtmlCompiler {
 		const typename = HtmlCompiler.getPropsTypename(cbid);
 
 		if (cbid === 'fragment') {
-			return `interface ${typename} ${itemsType}`;
+			return `export interface ${typename} ${itemsType}`;
 		} else {
 			const tagname = this.componentsTags[cbid];
 			if (this.isSvg[cbid]) {
-				return `type ${typename} = ChispaNodeBuilderPropsReactive<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
+				return `export type ${typename} = ChispaNodeBuilderPropsReactive<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
 			} else {
-				return `type ${typename} = ChispaNodeBuilderPropsReactive<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
+				return `export type ${typename} = ChispaNodeBuilderPropsReactive<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
 			}
 		}
 	}
