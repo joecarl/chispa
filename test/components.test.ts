@@ -150,6 +150,94 @@ describe('Component Creation, Mounting, and Unmounting', () => {
 		expect(container.innerHTML).toBe('');
 	});
 
+	it('should throw when mounting an already mounted component, but allow remounting after unmount', () => {
+		const factory = vi.fn(() => {
+			const div = document.createElement('div');
+			div.textContent = 'Once';
+			return div;
+		});
+		const MyComponent = component(factory);
+
+		const comp = MyComponent();
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+
+		comp.mount(container);
+		expect(() => comp.mount(container)).toThrow('Component is already mounted');
+		expect(factory).toHaveBeenCalledTimes(1);
+		expect(container.children.length).toBe(1);
+
+		comp.unmount();
+		expect(container.innerHTML).toBe('');
+
+		comp.mount(container);
+		expect(factory).toHaveBeenCalledTimes(2);
+		expect(container.innerHTML).toContain('Once');
+	});
+
+	it('should throw when mounting an already mounted ComponentList', () => {
+		const ItemList = componentList<{ id: string }>(
+			(item) => {
+				const div = document.createElement('div');
+				appendChild(div, () => item.get().id);
+				return div;
+			},
+			(item) => item.id
+		);
+
+		const container = document.createElement('div');
+		document.body.appendChild(container);
+		const list = ItemList(signal([{ id: 'a' }]));
+
+		list.mount(container);
+		expect(() => list.mount(container)).toThrow('ComponentList is already mounted');
+		expect(container.children.length).toBe(1);
+
+		list.unmount();
+		expect(container.innerHTML).toBe('');
+		list.mount(container);
+		expect(container.children.length).toBe(1);
+	});
+
+	it('should restore the execution context when the factory throws, so signals keep working', async () => {
+		vi.useFakeTimers();
+		try {
+			const container = document.createElement('div');
+			document.body.appendChild(container);
+
+			// A healthy component mounted before the failure
+			const count = signal(0);
+			const Counter = component(() => {
+				const div = document.createElement('div');
+				appendChild(div, () => 'count:' + count.get());
+				return div;
+			});
+			Counter().mount(container);
+			expect(container.textContent).toBe('count:0');
+
+			const Broken = component(() => {
+				throw new Error('boom');
+			});
+			const broken = Broken();
+			expect(() => broken.mount(container)).toThrow('boom');
+			expect(broken.nodes).toBeNull();
+			expect(container.textContent).toBe('count:0');
+
+			// Reading signals must not be blocked by a stale "createComponent" context...
+			expect(() => count.get()).not.toThrow();
+
+			// ...and the DOM mounted earlier must keep updating
+			count.set(1);
+			await vi.runOnlyPendingTimersAsync();
+			expect(container.textContent).toBe('count:1');
+
+			// Nor should the failed component remain as the current component context
+			expect(() => onUnmount(() => {})).toThrow('onUnmount must be called within a component context');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('should remove ComponentList items with falsy keys (empty string, 0)', async () => {
 		vi.useFakeTimers();
 		try {

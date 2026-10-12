@@ -24,6 +24,12 @@ export class Component<TProps extends Dict = any> {
 	mount(container: Node, anchor: Node | null = null) {
 		if (ChispaDebugConfig.enableMountLogging) console.log('Mounting Component', this);
 
+		// Mounting twice would run the factory again and orphan the nodes of the first
+		// mount (they could never be unmounted), so fail loudly instead.
+		if (this.container) {
+			throw new Error('Component is already mounted. Call unmount() before mounting it again.');
+		}
+
 		this.container = container;
 		this.anchor = anchor;
 
@@ -37,18 +43,23 @@ export class Component<TProps extends Dict = any> {
 
 		globalContext.pushExecutionStack('createComponent');
 		globalContext.pushComponentStack(this);
-		const node = this.factoryFn ? (this.factoryFn as any)(this.props) : null;
-		globalContext.popComponentStack();
-		globalContext.popExecutionStack();
-		// if node is fragment, convert to array of nodes
-		if (node) {
-			if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-				this.nodes = Array.from(node.childNodes);
+		try {
+			const node = this.factoryFn ? (this.factoryFn as any)(this.props) : null;
+			// if node is fragment, convert to array of nodes
+			if (node) {
+				if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+					this.nodes = Array.from(node.childNodes);
+				} else {
+					this.nodes = [node];
+				}
 			} else {
-				this.nodes = [node];
+				this.nodes = null;
 			}
-		} else {
-			this.nodes = null;
+		} finally {
+			// Always restore the stacks: if the factory throws and the 'createComponent'
+			// frame stays pushed, every later signal read fails and the whole page freezes.
+			globalContext.popComponentStack();
+			globalContext.popExecutionStack();
 		}
 		this.insertNodes();
 	}
@@ -220,6 +231,9 @@ export class ComponentList<TItem = any, TProps extends Dict = any> {
 
 	mount(container: Node, anchor: Node | null = null) {
 		//console.log('Mounting ComponentList');
+		if (this.container) {
+			throw new Error('ComponentList is already mounted. Call unmount() before mounting it again.');
+		}
 		this.container = container;
 		if (!anchor) {
 			// Without an anchor, items created later would be appended at the end of the
