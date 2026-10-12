@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-10-13
+
+### Added
+
+- `chispaHtmlPlugin({ exclude })`: paths (directories or files, relative to the Vite root) whose `.html` files are not compiled into `.chispa/types` when the project is scanned. Until now only `node_modules`, `.git`, `dist` and `.chispa` were skipped, so every `.html` under the root (e.g. `public/`) got compiled.
+- The generated `.d.ts` of a template now exports its prop types (`CbBoxProps`, `CbFragmentProps`, …), so `import type { CbBoxProps } from './x.html'` works.
+
+### Fixed
+
+- Emitting declarations (`tsc --declaration`) of a module that exports a template, or anything typed after `tpl.fragment`, failed with `TS4023: ... has or is using name 'CbFragmentProps' ... but cannot be named`, because the template prop types were not exported from the generated `.d.ts`.
+- Vite plugin: the virtual module ids of compiled templates are now relative to the Vite root. They used to carry the absolute path of the file, which Rollup turns into the output file name when building a library with `preserveModules` (`_virtual/_/home/user/project/src/x.html.chispa.js`), leaking the machine path into `dist`.
+- HTML compiler: a repeated `data-cb` in a template (or two that camelize to the same name, like `my-box` and `myBox`) is now a compile error. It used to silently keep the last element's builder, render it in every position and emit a duplicate property in the `.d.ts`. `data-cb="fragment"` is rejected too, as it collides with the whole-template builder.
+- HTML compiler: templates are parsed as `<template>` content, so elements that only make sense inside a parent (`<tr>`, `<td>`, `<tbody>`, `<caption>`, `<col>`…) are kept at the root of a file. A root `<tr data-cb="row">` used to be dropped by the parser without any error.
+- An exception thrown by a component factory no longer freezes the page: `Component.mount` now always restores the execution and component stacks, so signals keep being readable and the DOM mounted before the failure keeps updating. The exception itself still propagates.
+- HTML compiler: a `<svg data-cb="...">` no longer leaks its SVG context into the rest of the template. The elements that followed it were created with `createElementNS` in the SVG namespace instead of as HTML elements.
+- `addClass`, `classes`, `style` and `dataset` now work on SVG elements. They were only applied to `HTMLElement`; on an SVG element they fell through to plain property assignment, which ignored `classes` and `style` and threw a `TypeError` for `dataset`.
+
+### Changed
+
+- `Component.mount` and `ComponentList.mount` throw if called on an instance that is already mounted. Mounting twice used to run the factory again and leave the nodes of the first mount orphaned in the DOM. Call `unmount()` first to mount the same instance elsewhere.
+
 ## [1.0.1] - 2026-08-29
 
 First stable release. From this version on, Chispa follows semantic versioning: breaking changes only ship in a new major, and anything scheduled for removal is first marked as deprecated in a minor. The public API is what [DOCUMENTATION.md](./DOCUMENTATION.md) documents; `getItem`, `getValidProps`, `setAttributes`, `setProps` are internal and may change in minor versions (see "Internal exports" in the documentation).
