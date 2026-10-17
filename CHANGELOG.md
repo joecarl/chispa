@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- HTML compiler: a `data-cb` on a custom element (or any tag TypeScript's `HTMLElementTagNameMap` does not know) produced a `.d.ts` that failed to type-check (`HTMLElementTagNameMap['my-widget']`). The generated types now fall back to `HTMLElement` (`SVGElement`, `MathMLElement`) for unknown tags, through a `TagElement` helper type emitted in each `.d.ts`.
+- HTML compiler: the HTML content of an SVG `<foreignObject>` was created as SVG elements (`createElementNS(svg, 'P')`) and typed as `SVGElementTagNameMap['P']`. Every element is now created in the namespace the parser assigned to it, which also covers MathML (`<math>`) elements, created in the HTML namespace until now.
+- HTML compiler: a `data-cb` that does not camelize to a valid identifier (`1st`, `my.box`, `a b`…) is rejected with a clear compile error. It used to surface as a syntax error from the code formatter, with a line and column of the generated code.
+
 ## [1.0.2] - 2026-10-13
 
 ### Added

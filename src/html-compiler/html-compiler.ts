@@ -3,7 +3,12 @@ import { format } from 'prettier';
 
 const VOID_ELEMENTS = ['area', 'base', 'br', 'hr', 'img', 'input', 'link', 'meta', 'param', 'keygen', 'source'];
 
+const HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+const MATHML_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
+
+// A camelized data-cb becomes a property name and a type name in the generated code.
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 export class HtmlCompiler {
 	private components: Record<string, string> = {};
@@ -11,8 +16,7 @@ export class HtmlCompiler {
 	private stack: string[] = ['fragment'];
 	private componentsItems: Record<string, string[]> = {};
 	private componentsTags: Record<string, string> = {};
-	private isSvg: Record<string, boolean> = {};
-	private inSvgContext = 0;
+	private componentsNamespaces: Record<string, string | null> = {};
 	private root: DocumentFragment;
 
 	constructor(htmlContent: string) {
@@ -97,11 +101,11 @@ export class HtmlCompiler {
 		if (domNode.nodeType === 1) {
 			// Element
 			const element = domNode as Element;
-			let tagName = element.tagName;
-
-			if (tagName === 'svg') {
-				this.inSvgContext++;
-			}
+			// Lower case for HTML elements; SVG and MathML keep their case (linearGradient...)
+			const tagName = element.localName;
+			// The parser tracks the namespace itself, including the way back to HTML
+			// inside <foreignObject>, so there is no SVG context to keep here.
+			const namespace = element.namespaceURI;
 
 			let cbid = element.getAttribute('data-cb');
 
@@ -118,6 +122,13 @@ export class HtmlCompiler {
 				if (this.cbids.has(cbid)) {
 					throw new Error(`Duplicate data-cb "${rawCbid}" (builder "${cbid}"): every data-cb in a template must be unique.`);
 				}
+				// An invalid name would only fail later, when the generated code is formatted,
+				// with a syntax error pointing at generated lines.
+				if (!IDENTIFIER.test(cbid)) {
+					throw new Error(
+						`data-cb "${rawCbid}" (builder "${cbid}") is not a valid identifier: use letters, digits, "_" and "-" (which camelizes), starting with a letter or "_".`
+					);
+				}
 				this.cbids.add(cbid);
 				// Pushear a todos los padres
 				for (const comp of this.stack) {
@@ -129,8 +140,8 @@ export class HtmlCompiler {
 
 				this.stack.unshift(cbid);
 				this.components[cbid] = this.buildTsForNode(element, true);
-				this.componentsTags[cbid] = element.tagName;
-				this.isSvg[cbid] = this.inSvgContext > 0;
+				this.componentsTags[cbid] = tagName;
+				this.componentsNamespaces[cbid] = namespace;
 				this.stack.shift();
 
 				if (currComp === 'fragment') {
@@ -141,11 +152,10 @@ export class HtmlCompiler {
 			} else {
 				const attrs = this.getHtmlNodeAttrs(element, isComponent);
 
-				if (!this.inSvgContext) {
-					tagName = tagName.toLowerCase();
+				if (namespace === null || namespace === HTML_NAMESPACE) {
 					htmlNodeCode += `(() => { const node = document.createElement('${tagName}');\n`;
 				} else {
-					htmlNodeCode += `(() => { const node = document.createElementNS('${SVG_NAMESPACE}', '${tagName}');\n`;
+					htmlNodeCode += `(() => { const node = document.createElementNS('${namespace}', '${tagName}');\n`;
 				}
 
 				htmlNodeCode += `setAttributes(node, ${attrs});\n`;
@@ -161,7 +171,7 @@ export class HtmlCompiler {
 					}
 				});
 
-				if (!VOID_ELEMENTS.includes(tagName.toLowerCase())) {
+				if (!VOID_ELEMENTS.includes(tagName)) {
 					if (isComponent) {
 						htmlNodeCode += `
                         if (props.inner === null) {
@@ -184,16 +194,12 @@ export class HtmlCompiler {
 
 				htmlNodeCode += `return node;})()`;
 			}
-
-			if (tagName === 'svg') {
-				this.inSvgContext--;
-			}
 		} else if (domNode.nodeType === 3) {
 			// Text
 			const textNode = domNode as Text;
-			const parent = textNode.parentNode as Element | null;
-			// At the root the parent is the DocumentFragment, which has no tagName
-			const parentTag = parent && parent.tagName ? parent.tagName.toLowerCase() : '';
+			const parent = textNode.parentNode;
+			// At the root the parent is the DocumentFragment, which is not an element
+			const parentTag = parent && parent.nodeType === 1 ? (parent as Element).localName : '';
 
 			const mustOmit = ['table', 'thead', 'tbody', 'tfoot', 'tr'].includes(parentTag);
 
@@ -236,6 +242,16 @@ export class HtmlCompiler {
 		this.components['fragment'] = rendererJsx;
 	}
 
+	/**
+	 * Element type of a data-cb item for the `.d.ts`: looked up in the tag name map of its
+	 * namespace, with a fallback for the tags the map does not know (custom elements...).
+	 */
+	private static getElementType(tagname: string, namespace: string | null): string {
+		if (namespace === SVG_NAMESPACE) return `TagElement<'${tagname}', SVGElementTagNameMap, SVGElement>`;
+		if (namespace === MATHML_NAMESPACE) return `TagElement<'${tagname}', MathMLElementTagNameMap, MathMLElement>`;
+		return `TagElement<'${tagname}', HTMLElementTagNameMap, HTMLElement>`;
+	}
+
 	private getTypedef(cbid: string): string {
 		const items = this.componentsItems[cbid] || [];
 		let itemsType = '{\n';
@@ -250,12 +266,8 @@ export class HtmlCompiler {
 		if (cbid === 'fragment') {
 			return `export interface ${typename} ${itemsType}`;
 		} else {
-			const tagname = this.componentsTags[cbid];
-			if (this.isSvg[cbid]) {
-				return `export type ${typename} = ChispaNodeBuilderPropsReactive<SVGElementTagNameMap['${tagname}'], ${itemsType}>;`;
-			} else {
-				return `export type ${typename} = ChispaNodeBuilderPropsReactive<HTMLElementTagNameMap['${tagname.toLowerCase()}'], ${itemsType}>;`;
-			}
+			const elementType = HtmlCompiler.getElementType(this.componentsTags[cbid], this.componentsNamespaces[cbid]);
+			return `export type ${typename} = ChispaNodeBuilderPropsReactive<${elementType}, ${itemsType}>;`;
 		}
 	}
 
@@ -285,6 +297,8 @@ export class HtmlCompiler {
 
 		const dtsOutput = `
             import type { ChispaContentReactive, ChispaNodeBuilderPropsReactive } from 'chispa';
+
+            type TagElement<Tag extends string, TagNameMap, Fallback> = Tag extends keyof TagNameMap ? TagNameMap[Tag] : Fallback;
             
             ${typedefs}
             

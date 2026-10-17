@@ -62,7 +62,7 @@ describe('HTML Compiler', () => {
 		// The svg item and its children are SVG elements
 		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'svg')`);
 		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'circle')`);
-		expect(dts).toContain(`SVGElementTagNameMap['svg']`);
+		expect(dts).toContain(`TagElement<'svg', SVGElementTagNameMap, SVGElement>`);
 
 		// The elements after it are plain HTML
 		expect(ts).toContain(`document.createElement('div')`);
@@ -78,7 +78,7 @@ describe('HTML Compiler', () => {
 
 		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'g')`);
 		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'rect')`);
-		expect(dts).toContain(`SVGElementTagNameMap['g']`);
+		expect(dts).toContain(`TagElement<'g', SVGElementTagNameMap, SVGElement>`);
 		expect(ts).toContain(`document.createElement('p')`);
 	});
 
@@ -110,9 +110,53 @@ describe('HTML Compiler', () => {
 		expect(ts).toContain('cell:');
 		expect(ts).toContain(`document.createElement('tr')`);
 		expect(ts).toContain(`document.createElement('td')`);
-		expect(dts).toContain(`HTMLElementTagNameMap['tr']`);
-		expect(dts).toContain(`HTMLElementTagNameMap['td']`);
+		expect(dts).toContain(`TagElement<'tr', HTMLElementTagNameMap, HTMLElement>`);
+		expect(dts).toContain(`TagElement<'td', HTMLElementTagNameMap, HTMLElement>`);
 		expect(dts).toMatch(/interface CbFragmentProps \{\s*row\?:/);
+	});
+
+	it('should type a custom element data-cb with a fallback, as it is not in HTMLElementTagNameMap', async () => {
+		const compiler = new HtmlCompiler(`<my-widget data-cb="widget"></my-widget>`);
+		const { ts, dts } = await compiler.compile();
+
+		expect(ts).toContain(`document.createElement('my-widget')`);
+		expect(dts).toContain(`type TagElement<Tag extends string, TagNameMap, Fallback> = Tag extends keyof TagNameMap ? TagNameMap[Tag] : Fallback;`);
+		expect(dts).toContain(`TagElement<'my-widget', HTMLElementTagNameMap, HTMLElement>`);
+	});
+
+	it('should create the HTML content of an SVG <foreignObject> as HTML elements, not SVG ones', async () => {
+		const compiler = new HtmlCompiler(`<svg data-cb="icon"><foreignObject><p data-cb="label">x</p></foreignObject></svg><div data-cb="after"></div>`);
+		const { ts, dts } = await compiler.compile();
+
+		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject')`);
+		expect(ts).toContain(`document.createElement('p')`);
+		expect(ts).toContain(`document.createElement('div')`);
+		expect(ts).not.toContain(`'P'`);
+		expect(dts).toContain(`TagElement<'p', HTMLElementTagNameMap, HTMLElement>`);
+		expect(dts).toContain(`TagElement<'div', HTMLElementTagNameMap, HTMLElement>`);
+	});
+
+	it('should create MathML elements in their namespace', async () => {
+		const compiler = new HtmlCompiler(`<math data-cb="formula"><mi>x</mi></math>`);
+		const { ts, dts } = await compiler.compile();
+
+		expect(ts).toContain(`document.createElementNS('http://www.w3.org/1998/Math/MathML', 'mi')`);
+		expect(dts).toContain(`TagElement<'math', MathMLElementTagNameMap, MathMLElement>`);
+	});
+
+	it('should reject a data-cb that does not camelize to a valid identifier, with a clear error', async () => {
+		for (const name of ['1st', 'my.box', 'a b', '--x']) {
+			const compiler = new HtmlCompiler(`<div data-cb="${name}"></div>`);
+			await expect(compiler.compile()).rejects.toThrow(`data-cb "${name}" (builder "${name}") is not a valid identifier`);
+		}
+	});
+
+	it('should accept data-cb names with digits, "_" and "$" after the first character', async () => {
+		const compiler = new HtmlCompiler(`<div data-cb="item-2"></div><div data-cb="_x"></div><div data-cb="a$"></div>`);
+		const { ts } = await compiler.compile();
+		expect(ts).toContain('item2:');
+		expect(ts).toContain('_x:');
+		expect(ts).toContain('a$:');
 	});
 
 	it('should still compile text and elements at the root as before', async () => {
