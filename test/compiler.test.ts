@@ -159,6 +159,27 @@ describe('HTML Compiler', () => {
 		expect(ts).toContain('a$:');
 	});
 
+	it('should not emit an empty class attribute, nor a setAttributes call for an element without attributes', async () => {
+		const compiler = new HtmlCompiler(`<div><span class="-tpl--hidden">x</span><b class="bold" id="b">y</b></div>`);
+		const { ts } = await compiler.compile();
+
+		expect(ts).not.toContain(`class: ''`);
+		expect(ts).not.toContain(`setAttributes(node, {})`);
+		expect(ts).toContain(`setAttributes(node, { class: 'bold', id: 'b' })`);
+		expect(ts).toMatch(/document\.createElement\('div'\);\s*appendChild/);
+	});
+
+	it('should parse every template in its own fragment, even though the JSDOM window is shared', async () => {
+		const a = new HtmlCompiler(`<div data-cb="one"></div>`);
+		const b = new HtmlCompiler(`<div data-cb="two"></div>`);
+		const [ra, rb] = await Promise.all([a.compile(), b.compile()]);
+
+		expect(ra.ts).toContain('one:');
+		expect(ra.ts).not.toContain('two:');
+		expect(rb.ts).toContain('two:');
+		expect(rb.ts).not.toContain('one:');
+	});
+
 	it('should still compile text and elements at the root as before', async () => {
 		const compiler = new HtmlCompiler(`hello <b data-cb="bold">world</b> !`);
 		const { ts } = await compiler.compile();

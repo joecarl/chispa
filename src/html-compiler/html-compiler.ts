@@ -10,6 +10,10 @@ const MATHML_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
 // A camelized data-cb becomes a property name and a type name in the generated code.
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
+// Creating a JSDOM window costs more than parsing a template, so a single window is
+// shared by every compilation; each template is parsed into its own fragment.
+const sharedDocument = new JSDOM('').window.document;
+
 export class HtmlCompiler {
 	private components: Record<string, string> = {};
 	private cbids = new Set<string>(); // camelized data-cb names seen so far, to reject duplicates
@@ -23,9 +27,8 @@ export class HtmlCompiler {
 		// Parse as <template> content: in body context the HTML parser silently drops
 		// elements that only make sense inside a parent (a root <tr>, <td>, <tbody>...),
 		// while the "in template" insertion mode keeps them, as a partial template needs.
-		const dom = new JSDOM(`<template>${htmlContent}</template>`);
-		const template = dom.window.document.querySelector('template');
-		if (!template) throw new Error('Not valid HTML');
+		const template = sharedDocument.createElement('template');
+		template.innerHTML = htmlContent;
 		this.root = template.content;
 	}
 
@@ -65,6 +68,9 @@ export class HtmlCompiler {
 		});
 
 		finalClass = finalClass.trim();
+
+		// No class attribute at all is better than an empty `class=""` on every node
+		if (finalClass === '') return '';
 
 		return ` 'class': "${finalClass}", `;
 	}
@@ -158,7 +164,9 @@ export class HtmlCompiler {
 					htmlNodeCode += `(() => { const node = document.createElementNS('${namespace}', '${tagName}');\n`;
 				}
 
-				htmlNodeCode += `setAttributes(node, ${attrs});\n`;
+				if (attrs !== '{}') {
+					htmlNodeCode += `setAttributes(node, ${attrs});\n`;
+				}
 				if (isComponent) {
 					htmlNodeCode += `setProps(node, props);\n`;
 				}

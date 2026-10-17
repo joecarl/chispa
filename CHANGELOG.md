@@ -2,13 +2,18 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.3] - Unreleased
 
 ### Fixed
 
 - HTML compiler: a `data-cb` on a custom element (or any tag TypeScript's `HTMLElementTagNameMap` does not know) produced a `.d.ts` that failed to type-check (`HTMLElementTagNameMap['my-widget']`). The generated types now fall back to `HTMLElement` (`SVGElement`, `MathMLElement`) for unknown tags, through a `TagElement` helper type emitted in each `.d.ts`.
 - HTML compiler: the HTML content of an SVG `<foreignObject>` was created as SVG elements (`createElementNS(svg, 'P')`) and typed as `SVGElementTagNameMap['P']`. Every element is now created in the namespace the parser assigned to it, which also covers MathML (`<math>`) elements, created in the HTML namespace until now.
 - HTML compiler: a `data-cb` that does not camelize to a valid identifier (`1st`, `my.box`, `a b`…) is rejected with a clear compile error. It used to surface as a syntax error from the code formatter, with a line and column of the generated code.
+
+### Changed
+
+- HTML compiler: a single JSDOM window is shared by every compilation, each template being parsed into its own fragment. Creating a window per template dominated the compile time (~35× slower parsing); the Vite plugin scans and compiles every template at startup and on each change.
+- HTML compiler: elements without classes no longer get a `class=""` attribute, and elements without any attribute no longer get a `setAttributes` call in the generated code. Every rendered node used to carry an empty `class` attribute.
 
 ## [1.0.2] - 2026-10-13
 
