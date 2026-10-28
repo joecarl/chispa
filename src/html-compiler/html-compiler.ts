@@ -44,6 +44,8 @@ export class HtmlCompiler {
 		return camelized;
 	}
 
+	// Kept for the future path prefixing of inline styles (the PHP compiler's
+	// prefixizeStyle), see the `style` branch in getHtmlNodeAttrs.
 	private static parseStyle(cssCode: string): string {
 		let out = '{';
 		const styles = cssCode.split(';');
@@ -57,7 +59,7 @@ export class HtmlCompiler {
 		return out;
 	}
 
-	private makeClassAttr(classAttr: string | null, isComponent: boolean): string {
+	private makeClassAttr(classAttr: string | null): string {
 		const tplClasses = (classAttr || '').split(' ');
 		let finalClass = '';
 
@@ -75,9 +77,9 @@ export class HtmlCompiler {
 		return ` 'class': "${finalClass}", `;
 	}
 
-	private getHtmlNodeAttrs(domNode: Element, isComponent: boolean): string {
+	private getHtmlNodeAttrs(domNode: Element): string {
 		let attrsHtml = '{';
-		attrsHtml += this.makeClassAttr(domNode.getAttribute('class'), isComponent);
+		attrsHtml += this.makeClassAttr(domNode.getAttribute('class'));
 
 		Array.from(domNode.attributes).forEach((attr) => {
 			const attrName = attr.name;
@@ -156,7 +158,7 @@ export class HtmlCompiler {
 					htmlNodeCode += `getItem(template, props.nodes, '${cbid}')`;
 				}
 			} else {
-				const attrs = this.getHtmlNodeAttrs(element, isComponent);
+				const attrs = this.getHtmlNodeAttrs(element);
 
 				if (namespace === null || namespace === HTML_NAMESPACE) {
 					htmlNodeCode += `(() => { const node = document.createElement('${tagName}');\n`;
@@ -293,9 +295,7 @@ export class HtmlCompiler {
 		const jsOutput = `
             import { appendChild, getItem, setAttributes, setProps } from 'chispa';
             import type { ChispaContentReactive, ChispaNodeBuilderPropsReactive } from 'chispa';
-			
-            const SVG_NS = 'http://www.w3.org/2000/svg';
-            
+
             const template = {
                 ${componentsClasses}
             };

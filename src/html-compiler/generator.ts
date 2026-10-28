@@ -16,20 +16,39 @@ export function isExcluded(filePath: string, rootDir: string, exclude: string[])
 	});
 }
 
-export async function generateTypes(filePath: string, content: string, rootDir: string) {
-	try {
-		const compiler = new HtmlCompiler(content);
-		const { dts } = await compiler.compile();
+/** The result of compiling a template: its module code, its typings and where they belong. */
+export class CompiledTemplate {
+	constructor(
+		readonly filePath: string,
+		readonly ts: string,
+		readonly dts: string
+	) {}
 
+	/** Writes the `.d.ts` to `.chispa/types`, mirroring the template path under the root. */
+	writeTypes(rootDir: string) {
 		const outDir = path.join(rootDir, '.chispa/types');
-		const relativePath = path.relative(rootDir, filePath);
+		const relativePath = path.relative(rootDir, this.filePath);
 		const targetPath = path.join(outDir, relativePath + '.d.ts');
 		const targetDir = path.dirname(targetPath);
 
 		if (!fs.existsSync(targetDir)) {
 			fs.mkdirSync(targetDir, { recursive: true });
 		}
-		fs.writeFileSync(targetPath, dts);
+		fs.writeFileSync(targetPath, this.dts);
+	}
+}
+
+/** Compiles a template. Throws on a compile error. */
+export async function compileTemplate(filePath: string, content: string): Promise<CompiledTemplate> {
+	const { ts, dts } = await new HtmlCompiler(content).compile();
+	return new CompiledTemplate(filePath, ts, dts);
+}
+
+/** Compiles a template and writes its types; a broken template is logged (the scan goes on). */
+export async function generateTypes(filePath: string, content: string, rootDir: string) {
+	try {
+		const compiled = await compileTemplate(filePath, content);
+		compiled.writeTypes(rootDir);
 	} catch (e) {
 		console.error(`[chispa] Error generating types for ${filePath}`, e);
 	}

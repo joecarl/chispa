@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { chispaHtmlPlugin, toVirtualId, fromVirtualId } from '../src/html-compiler/vite-plugin';
 import { findAndCompileHtmlFiles, isExcluded } from '../src/html-compiler/generator';
+import { HtmlCompiler } from '../src/html-compiler/html-compiler';
 
 const TEMPLATE = `<div data-cb="box"><span data-cb="label">Hi</span></div>`;
 
@@ -74,6 +75,74 @@ describe('Vite plugin: virtual module ids', () => {
 		const dts = fs.readFileSync(generatedDts('src/comp/comp.html'), 'utf-8');
 		expect(dts).toContain('export type CbBoxProps');
 		expect(dts).toContain('export interface CbFragmentProps');
+	});
+});
+
+describe('Vite plugin: compile each template once', () => {
+	function loaded(file: string) {
+		return { server: { moduleGraph: { getModuleById: (id: string) => (id === toVirtualId(file, root) ? { id } : undefined) } } };
+	}
+	function notLoaded() {
+		return { server: { moduleGraph: { getModuleById: () => undefined } } };
+	}
+
+	it('compiles a template once on load, writing its code and its types from the same compilation', async () => {
+		const compile = vi.spyOn(HtmlCompiler.prototype, 'compile');
+		const plugin = chispaHtmlPlugin();
+		(plugin.configResolved as any)({ root });
+		const file = write('src/comp/comp.html', TEMPLATE);
+
+		const code = await (plugin.load as any).call({ addWatchFile: vi.fn() }, toVirtualId(file, root));
+
+		expect(code).toContain('box');
+		expect(compile).toHaveBeenCalledTimes(1);
+		expect(fs.readFileSync(generatedDts('src/comp/comp.html'), 'utf-8')).toContain('CbBoxProps');
+	});
+
+	it('on a change to a loaded template, leaves the compilation to the reload of its module', async () => {
+		const compile = vi.spyOn(HtmlCompiler.prototype, 'compile');
+		const plugin = chispaHtmlPlugin();
+		(plugin.configResolved as any)({ root });
+		const file = write('src/comp/comp.html', TEMPLATE);
+		const read = vi.fn();
+
+		const modules = await (plugin.handleHotUpdate as any)({ file, read, ...loaded(file) });
+
+		expect(modules).toEqual([{ id: toVirtualId(file, root) }]);
+		expect(compile).not.toHaveBeenCalled();
+		expect(read).not.toHaveBeenCalled();
+
+		// The reload compiles the new content once and rewrites the types
+		write('src/comp/comp.html', `<p data-cb="changed"></p>`);
+		const code = await (plugin.load as any).call({ addWatchFile: vi.fn() }, toVirtualId(file, root));
+		expect(code).toContain('changed');
+		expect(compile).toHaveBeenCalledTimes(1);
+		expect(fs.readFileSync(generatedDts('src/comp/comp.html'), 'utf-8')).toContain('CbChangedProps');
+	});
+
+	it('on a change to a template nobody imports, regenerates its types for the editor', async () => {
+		const compile = vi.spyOn(HtmlCompiler.prototype, 'compile');
+		const plugin = chispaHtmlPlugin();
+		(plugin.configResolved as any)({ root });
+		const file = write('src/comp/comp.html', TEMPLATE);
+
+		const modules = await (plugin.handleHotUpdate as any)({ file, read: async () => TEMPLATE, ...notLoaded() });
+
+		expect(modules).toBeUndefined();
+		expect(compile).toHaveBeenCalledTimes(1);
+		expect(fs.existsSync(generatedDts('src/comp/comp.html'))).toBe(true);
+	});
+
+	it('on a change to an excluded template nobody imports, does nothing', async () => {
+		const compile = vi.spyOn(HtmlCompiler.prototype, 'compile');
+		const plugin = chispaHtmlPlugin({ exclude: ['public'] });
+		(plugin.configResolved as any)({ root });
+		const file = write('public/page.html', TEMPLATE);
+
+		await (plugin.handleHotUpdate as any)({ file, read: async () => TEMPLATE, ...notLoaded() });
+
+		expect(compile).not.toHaveBeenCalled();
+		expect(fs.existsSync(generatedDts('public/page.html'))).toBe(false);
 	});
 });
 

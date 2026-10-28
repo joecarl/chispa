@@ -1,5 +1,4 @@
-import { HtmlCompiler } from './html-compiler';
-import { generateTypes, findAndCompileHtmlFiles, isExcluded } from './generator';
+import { compileTemplate, generateTypes, findAndCompileHtmlFiles, isExcluded } from './generator';
 import { type Plugin, transformWithOxc } from 'vite';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -46,20 +45,22 @@ export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin 
 			rootDir = config.root;
 		},
 		async buildStart() {
+			// Generates the types of every template, imported or not, so the editor has them.
+			// The imported ones get compiled again by `load`: a one-off cost per dev session.
 			await findAndCompileHtmlFiles(rootDir, rootDir, exclude);
 		},
 		async handleHotUpdate(ctx) {
-			if (ctx.file.endsWith('.html')) {
-				if (!isExcluded(ctx.file, rootDir, exclude)) {
-					const content = await ctx.read();
-					await generateTypes(ctx.file, content, rootDir);
-				}
+			if (!ctx.file.endsWith('.html')) return;
 
-				// Buscamos el módulo virtual asociado al archivo HTML modificado.
-				const module = ctx.server.moduleGraph.getModuleById(toVirtualId(ctx.file, rootDir));
-				if (module) {
-					return [module];
-				}
+			// If the template is loaded, its reload (`load`) recompiles it and rewrites its types.
+			const module = ctx.server.moduleGraph.getModuleById(toVirtualId(ctx.file, rootDir));
+			if (module) {
+				return [module];
+			}
+
+			// Nobody imports it (yet): keep its types up to date for the editor anyway.
+			if (!isExcluded(ctx.file, rootDir, exclude)) {
+				await generateTypes(ctx.file, await ctx.read(), rootDir);
 			}
 		},
 		async resolveId(source, importer, options) {
@@ -85,11 +86,10 @@ export function chispaHtmlPlugin(options: ChispaHtmlPluginOptions = {}): Plugin 
 					return 'export default {};';
 				}
 
-				const compiler = new HtmlCompiler(content);
-				const { ts } = await compiler.compile();
-				await generateTypes(realId, content, rootDir);
+				const compiled = await compileTemplate(realId, content);
+				compiled.writeTypes(rootDir);
 
-				const result = await transformWithOxc(ts, realId + '.ts');
+				const result = await transformWithOxc(compiled.ts, realId + '.ts');
 				return result.code;
 			} catch (e) {
 				console.error(`[chispa] Error loading ${id}:`, e);

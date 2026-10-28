@@ -62,6 +62,7 @@ describe('HTML Compiler', () => {
 		// The svg item and its children are SVG elements
 		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'svg')`);
 		expect(ts).toContain(`document.createElementNS('http://www.w3.org/2000/svg', 'circle')`);
+		expect(ts).not.toContain('SVG_NS'); // the namespace goes inline, no unused constant
 		expect(dts).toContain(`TagElement<'svg', SVGElementTagNameMap, SVGElement>`);
 
 		// The elements after it are plain HTML

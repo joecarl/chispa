@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Vite plugin: loading a template compiles it once, writing its `.d.ts` from the same compilation (it used to compile twice, the second time only for the types), and a change to a loaded template is compiled only by the reload of its module (it used to be compiled by the HMR hook as well).
+- HTML compiler: removed an unused `isComponent` parameter and the unused `SVG_NS` constant emitted at the top of every compiled template.
+
 ## [1.0.3] - 2026-10-20
 
 ### Fixed
