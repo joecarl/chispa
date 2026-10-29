@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Translations in templates: `data-i18n` marks the first non-blank text node of an element, `data-i18n-<n>` the n-th one and `data-i18n-<attribute>` an attribute; the key is the text itself unless the marker has a value. Marked text and attributes are reactive, so changing language updates them in place; the source text is shown until a translation exists, and a binding from TypeScript wins on a `data-cb` item. See "Translations" in `DOCUMENTATION.md`.
+- `lang`, `registerTranslations`, `t`, `translate` and `resetTranslations`, plus `ChispaDebugConfig.enableMissingTranslationWarnings`, enabled by `enableDebugging()`.
+- `i18nText` and `i18nAttr`, internal exports used by the generated code of templates with translation marks.
+
 ### Changed
 
 - Vite plugin: loading a template compiles it once, writing its `.d.ts` from the same compilation (it used to compile twice, the second time only for the types), and a change to a loaded template is compiled only by the reload of its module (it used to be compiled by the HMR hook as well).

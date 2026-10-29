@@ -200,3 +200,100 @@ describe('HTML Compiler', () => {
 		expect(ts).toContain('\\n');
 	});
 });
+
+describe('HTML Compiler: translation markers (data-i18n)', () => {
+	it('compiles a marked text into i18nText, using the text as key, and imports the helper', async () => {
+		const { ts } = await new HtmlCompiler(`<h1 data-i18n>Inicio</h1>`).compile();
+
+		expect(ts).toContain(`i18nText('Inicio')`);
+		expect(ts).toContain(`import { appendChild, getItem, i18nText, setAttributes, setProps } from 'chispa'`);
+		expect(ts).not.toContain('data-i18n');
+	});
+
+	it('does not import the helpers in a template without marks', async () => {
+		const { ts } = await new HtmlCompiler(`<h1>Inicio</h1>`).compile();
+
+		expect(ts).toContain(`import { appendChild, getItem, setAttributes, setProps } from 'chispa'`);
+		expect(ts).not.toContain('i18n');
+	});
+
+	it('uses the value of data-i18n as explicit key, keeping the text as default', async () => {
+		const { ts } = await new HtmlCompiler(`<h1 data-i18n="home.title">Inicio</h1>`).compile();
+
+		expect(ts).toContain(`i18nText('home.title', 'Inicio')`);
+	});
+
+	it('normalizes the whitespace of the message and keeps the surrounding whitespace outside it', async () => {
+		const { ts } = await new HtmlCompiler(`<p data-i18n>\n\tNada mal,\n\tcontinúa\n</p>`).compile();
+
+		expect(ts).toContain(`i18nText('Nada mal, continúa', 'Nada mal, continúa', ' ', ' ')`);
+	});
+
+	it('marks the n-th non-blank text node with data-i18n-<n>, data-i18n being data-i18n-0', async () => {
+		const { ts } = await new HtmlCompiler(`<p data-i18n data-i18n-1="p.bye">Hola <b>mundo</b> adiós</p>`).compile();
+
+		expect(ts).toContain(`i18nText('Hola', 'Hola', '', ' ')`);
+		expect(ts).toContain(`document.createTextNode('mundo')`);
+		expect(ts).toContain(`i18nText('p.bye', 'adiós', ' ', '')`);
+	});
+
+	it('translates an attribute with data-i18n-<attribute>, leaving it out of the static attributes', async () => {
+		const { ts } = await new HtmlCompiler(`<input type="text" placeholder="Buscar..." data-i18n-placeholder />`).compile();
+
+		expect(ts).toContain(`i18nAttr(node, 'placeholder', 'Buscar...')`);
+		expect(ts).toContain(`setAttributes(node, { type: 'text' })`);
+		expect(ts).toContain(`import { appendChild, getItem, i18nAttr, setAttributes, setProps } from 'chispa'`);
+	});
+
+	it('accepts an explicit key for an attribute', async () => {
+		const { ts } = await new HtmlCompiler(`<input placeholder="Buscar..." data-i18n-placeholder="search.hint" />`).compile();
+
+		expect(ts).toContain(`i18nAttr(node, 'placeholder', 'search.hint', 'Buscar...')`);
+	});
+
+	it('lets a TypeScript binding of the same property win on a data-cb item', async () => {
+		const html = `<input data-cb="search" placeholder="Buscar..." aria-label="Búsqueda" data-i18n-placeholder data-i18n-aria-label />`;
+		const { ts } = await new HtmlCompiler(html).compile();
+
+		expect(ts).toContain(`if (props['placeholder'] === undefined) i18nAttr(node, 'placeholder', 'Buscar...');`);
+		expect(ts).toContain(`if (props['ariaLabel'] === undefined) i18nAttr(node, 'aria-label', 'Búsqueda');`);
+	});
+
+	it('translates the default content of a data-cb item, which `inner` still overrides', async () => {
+		const { ts } = await new HtmlCompiler(`<button data-cb="btn" data-i18n>Guardar</button>`).compile();
+
+		expect(ts).toMatch(/props\.inner !== undefined[\s\S]*appendChild\(node, i18nText\('Guardar'\)\)/);
+	});
+
+	it('leaves punctuation around a child element alone', async () => {
+		const { ts } = await new HtmlCompiler(`<p data-i18n>El valor es <span data-cb="value">0</span>.</p>`).compile();
+
+		expect(ts).toContain(`i18nText('El valor es', 'El valor es', '', ' ')`);
+		expect(ts).toContain(`document.createTextNode('.')`);
+	});
+
+	it('rejects data-i18n on an element without text', async () => {
+		await expect(new HtmlCompiler(`<input placeholder="Buscar..." data-i18n />`).compile()).rejects.toThrow('has no text to translate');
+	});
+
+	it('rejects an index beyond the text nodes of the element', async () => {
+		await expect(new HtmlCompiler(`<p data-i18n data-i18n-1>Hola</p>`).compile()).rejects.toThrow('only 1 text node(s)');
+	});
+
+	it('rejects data-i18n-<attribute> when the element has no such attribute', async () => {
+		await expect(new HtmlCompiler(`<input data-i18n-title />`).compile()).rejects.toThrow('no "title" attribute');
+	});
+
+	it('rejects text with letters left unmarked next to translated text', async () => {
+		await expect(new HtmlCompiler(`<p data-i18n>Hola <b>mundo</b> adiós</p>`).compile()).rejects.toThrow('data-i18n-1');
+	});
+
+	it('rejects data-i18n together with data-i18n-0', async () => {
+		await expect(new HtmlCompiler(`<p data-i18n data-i18n-0>Hola</p>`).compile()).rejects.toThrow('same text node');
+	});
+
+	it('locates the error in the data-cb that contains the element', async () => {
+		await expect(new HtmlCompiler(`<div data-cb="card"><input data-i18n /></div>`).compile()).rejects.toThrow('<input> inside data-cb "card"');
+		await expect(new HtmlCompiler(`<input data-cb="search" data-i18n />`).compile()).rejects.toThrow('<input data-cb="search">');
+	});
+});

@@ -1,5 +1,7 @@
 import { JSDOM } from 'jsdom';
 import { format } from 'prettier';
+import { collectI18nMarks, I18nCodegen, isContentText } from './html-compiler-i18n';
+import { camelize } from './naming';
 
 const VOID_ELEMENTS = ['area', 'base', 'br', 'hr', 'img', 'input', 'link', 'meta', 'param', 'keygen', 'source'];
 
@@ -21,6 +23,7 @@ export class HtmlCompiler {
 	private componentsItems: Record<string, string[]> = {};
 	private componentsTags: Record<string, string> = {};
 	private componentsNamespaces: Record<string, string | null> = {};
+	private i18n = new I18nCodegen();
 	private root: DocumentFragment;
 
 	constructor(htmlContent: string) {
@@ -32,29 +35,17 @@ export class HtmlCompiler {
 		this.root = template.content;
 	}
 
-	private static camelize(str: string): string {
-		if (str.startsWith('--')) {
-			return str;
-		}
-		const arr = str.split('-');
-		let camelized = '';
-		arr.forEach((v, i) => {
-			camelized += i === 0 ? v : v.charAt(0).toUpperCase() + v.slice(1);
-		});
-		return camelized;
-	}
-
 	// Kept for the future path prefixing of inline styles (the PHP compiler's
 	// prefixizeStyle), see the `style` branch in getHtmlNodeAttrs.
 	private static parseStyle(cssCode: string): string {
 		let out = '{';
 		const styles = cssCode.split(';');
-		styles.forEach((line) => {
+		for (const line of styles) {
 			const parts = line.split(':');
-			if (parts.length !== 2) return;
-			const prop = HtmlCompiler.camelize(parts[0].trim());
+			if (parts.length !== 2) continue;
+			const prop = camelize(parts[0].trim());
 			out += ` ${prop}: '${parts[1].trim()}',`;
-		});
+		}
 		out += '}';
 		return out;
 	}
@@ -63,11 +54,10 @@ export class HtmlCompiler {
 		const tplClasses = (classAttr || '').split(' ');
 		let finalClass = '';
 
-		tplClasses.forEach((tplClass) => {
-			if (!tplClass.startsWith('-tpl--')) {
-				finalClass += tplClass + ' ';
-			}
-		});
+		for (const tplClass of tplClasses) {
+			if (tplClass.startsWith('-tpl--')) continue;
+			finalClass += tplClass + ' ';
+		}
 
 		finalClass = finalClass.trim();
 
@@ -77,7 +67,8 @@ export class HtmlCompiler {
 		return ` 'class': "${finalClass}", `;
 	}
 
-	private getHtmlNodeAttrs(domNode: Element): string {
+	/** Static attributes of the node; `skip` holds the translated ones, set by `i18nAttr` instead. */
+	private getHtmlNodeAttrs(domNode: Element, skip: ReadonlySet<string> = new Set()): string {
 		let attrsHtml = '{';
 		attrsHtml += this.makeClassAttr(domNode.getAttribute('class'));
 
@@ -87,6 +78,7 @@ export class HtmlCompiler {
 
 			if (attrName === 'data-cb') return;
 			if (attrName === 'class') return;
+			if (skip.has(attrName)) return;
 
 			// Use JSON.stringify to properly escape newlines, quotes and other characters
 			const valueLiteral = JSON.stringify(attrValue);
@@ -101,6 +93,14 @@ export class HtmlCompiler {
 
 		attrsHtml += '}';
 		return attrsHtml;
+	}
+
+	// Where an element is, for compile errors: `<p>`, `<button data-cb="btn">` or `<p> inside data-cb "card"`
+	private describe(element: Element, isComponent: boolean): string {
+		const owner = this.stack[0];
+		if (owner === 'fragment') return `<${element.localName}>`;
+		if (isComponent) return `<${element.localName} data-cb="${owner}">`;
+		return `<${element.localName}> inside data-cb "${owner}"`;
 	}
 
 	private buildTsForNode(domNode: Node, isComponent = false): string {
@@ -121,7 +121,7 @@ export class HtmlCompiler {
 				const currComp = this.stack[0];
 				element.removeAttribute('data-cb');
 				const rawCbid = cbid;
-				cbid = HtmlCompiler.camelize(cbid);
+				cbid = camelize(cbid);
 				// A repeated name would silently overwrite the previous builder (and render
 				// the last element in every position), so fail at compile time instead.
 				if (cbid === 'fragment') {
@@ -158,7 +158,9 @@ export class HtmlCompiler {
 					htmlNodeCode += `getItem(template, props.nodes, '${cbid}')`;
 				}
 			} else {
-				const attrs = this.getHtmlNodeAttrs(element);
+				// Translation marks (`data-i18n*`) are read and removed before the attributes are emitted
+				const marks = collectI18nMarks(element, this.describe(element, isComponent));
+				const attrs = this.getHtmlNodeAttrs(element, new Set(marks.attrs.keys()));
 
 				if (namespace === null || namespace === HTML_NAMESPACE) {
 					htmlNodeCode += `(() => { const node = document.createElement('${tagName}');\n`;
@@ -172,10 +174,19 @@ export class HtmlCompiler {
 				if (isComponent) {
 					htmlNodeCode += `setProps(node, props);\n`;
 				}
+				htmlNodeCode += this.i18n.attributes(element, marks.attrs, isComponent);
 
 				let subTs = '';
+				let textIndex = 0;
 				element.childNodes.forEach((child) => {
-					const chCode = this.buildTsForNode(child);
+					let chCode: string;
+					if (isContentText(child)) {
+						const mark = marks.texts.get(textIndex);
+						chCode = mark ? this.i18n.textNode(child, mark.key) : this.buildTsForNode(child);
+						textIndex++;
+					} else {
+						chCode = this.buildTsForNode(child);
+					}
 					if (chCode) {
 						subTs += `appendChild(node, ${chCode});\n`;
 					}
@@ -292,8 +303,11 @@ export class HtmlCompiler {
 			componentsClasses += `${cbid}: ${this.wrapFnComponent(cbid, compJsx)},\n`;
 		}
 
+		// The translation helpers are imported only by the templates that use them
+		const runtimeImports = ['appendChild', 'getItem', 'setAttributes', 'setProps', ...this.i18n.helpers].sort();
+
 		const jsOutput = `
-            import { appendChild, getItem, setAttributes, setProps } from 'chispa';
+            import { ${runtimeImports.join(', ')} } from 'chispa';
             import type { ChispaContentReactive, ChispaNodeBuilderPropsReactive } from 'chispa';
 
             const template = {

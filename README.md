@@ -20,6 +20,7 @@ The result is an engine focused on **absolute simplicity and clean code**. It is
 - **Embeddable engine**: No imposed architecture; perfect both for full applications and for embedding in existing systems.
 - **Lightweight**: Zero dependencies in the browser runtime (~28 KB unminified). `jsdom` and `prettier` are used only by the HTML compiler at build time and never reach your bundle.
 - **Vite integration**: Ships a Vite plugin for a smooth development experience.
+- **Translations built in**: Mark a text with `data-i18n` (or an attribute with `data-i18n-placeholder`) in the template and switch language with a signal; every translated node updates in place.
 
 ## Create a new project
 
@@ -122,7 +123,7 @@ mountRoot(MyComponent(), document.body);
 
 ## Documentation
 
-The full reference (lists, `nodes`, controlled inputs, dependency injection, the asynchronous update model and debugging warnings) lives in [DOCUMENTATION.md](./DOCUMENTATION.md).
+The full reference (lists, `nodes`, controlled inputs, dependency injection, translations, the asynchronous update model and debugging warnings) lives in [DOCUMENTATION.md](./DOCUMENTATION.md).
 
 ## License
 

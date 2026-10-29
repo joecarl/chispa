@@ -385,6 +385,59 @@ export const Field = component<{ ctx: FormCtx; name: string }>(({ ctx, name }) =
 
 Create the context inside the parent component's function (as in the example): every reactivity created there is bound to its lifecycle and released when it unmounts. If you prefer to model it as a class, `inject(FormCtx, { local: true })` in the parent gives you a fresh instance with the same lifecycle, which you likewise hand out through props.
 
+## Translations (`i18n`)
+
+Templates are written in the source language and marked where they need translating. The compiler turns each mark into a reactive text node or attribute, so switching language updates every translated node in place.
+
+### Marking templates
+
+| Marker                                      | Translates                                                   | Key                                                        |
+| ------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `data-i18n`                                 | the first non-blank text node of the element (`data-i18n-0`) | the text, with its whitespace normalized                   |
+| `data-i18n="home.title"`                    | the same                                                     | `home.title`; the text is shown until a translation exists |
+| `data-i18n-1`, `data-i18n-2`…               | the n-th non-blank text node, counting from 0                | as above                                                   |
+| `data-i18n-placeholder`, `data-i18n-title`… | that attribute                                               | its value, or the value of the marker                      |
+
+```html
+<h1 data-i18n>Inicio</h1>
+<p data-i18n-0 data-i18n-1>Hola <b>mundo</b> adiós</p>
+<input data-cb="name" placeholder="Escribe tu nombre..." data-i18n-placeholder />
+<button data-cb="save" data-i18n="actions.save"><i class="icon-save"></i> Guardar</button>
+```
+
+- A mark translates a text node, not the content of the element: child elements are left alone, and the whitespace around the text is kept so that `Hola` and `<b>mundo</b>` never get glued together. A missing translation shows the source text.
+- On a `data-cb` element `inner` replaces the translated content as usual, and a translated attribute is skipped when TypeScript binds the same property: an explicit binding always wins.
+- Compile errors: a text mark on an element without text (use `data-i18n-<attribute>`), an index beyond the text nodes, a mark for an attribute the element does not have, and text with letters left unmarked next to translated text (`<p data-i18n>Hola <b>mundo</b> adiós</p>`: add `data-i18n-1` or wrap it in its own element).
+- Text nodes are translated one by one, so a sentence that has to be reordered around a child element is better built from TypeScript with `t()`.
+
+### Catalogs and TypeScript
+
+```typescript
+import { component, lang, registerTranslations, signal, t, translate } from 'chispa';
+import tpl from './greeting.html';
+
+registerTranslations('en', {
+	Inicio: 'Home',
+	'Escribe tu nombre...': 'Type your name...',
+	actions: { save: 'Save' }, // registers `actions.save`
+	greeting: 'Hello, {name}',
+});
+lang.set('en'); // every translated text and attribute updates on the next tick
+
+export const Greeting = component(() => {
+	const name = signal('Ana');
+	return tpl.fragment({
+		title: { inner: t('greeting', { name }) },
+		saveBtn: { onclick: () => alert(translate('Guardado')) },
+	});
+});
+```
+
+- **`lang`** is a writable signal with the current language, initially the `lang` attribute of `<html>` (`'en'` when empty).
+- **`registerTranslations(locale, catalog)`** can be called at any time and more than once per language. Nested objects flatten into dotted keys; a key that contains dots itself is kept literally. To load one language at a time, `import()` its JSON, register it and set `lang`.
+- **`t(key, params?)`** returns a `Signal<string>` re-evaluated when the language, the catalogs or a signal in `params` change. **`translate(key, params?)`** returns a plain string for handlers and effects; it reads `lang`, so inside a `computed` it is tracked, and in a component factory (where signals cannot be read) `t()` is the one to use. Both fill `{name}` placeholders from values, signals or functions.
+- **`resetTranslations()`** drops every catalog, for test isolation. With `ChispaDebugConfig.enableMissingTranslationWarnings` (on with `enableDebugging()`) a key missing from the catalog of the current language is reported once.
+
 ## Debugging (`ChispaDebugConfig`)
 
 All development diagnostics are **off by default**, so a production bundle never logs anything unless asked to. The recommended way to turn them on is a single call at application start, guarded by your bundler's development flag so that production builds drop it entirely (Chispa itself does not detect the environment):
@@ -395,16 +448,17 @@ import { enableDebugging } from 'chispa';
 if (import.meta.env.DEV) enableDebugging();
 ```
 
-`enableDebugging()` enables the warnings that are reliable in any application: `enableMissingBindingWarnings` and `enableInertReactivityWarnings`. The noisier diagnostics stay off unless you pass them explicitly, e.g. `enableDebugging({ enableMountLogging: true })`. In particular `enableReactivityWarnings` reports every reactivity created outside a component, which by design includes the effects that services obtained with `inject` set up in their constructors.
+`enableDebugging()` enables the warnings that are reliable in any application: `enableMissingBindingWarnings`, `enableInertReactivityWarnings` and `enableMissingTranslationWarnings`. The noisier diagnostics stay off unless you pass them explicitly, e.g. `enableDebugging({ enableMountLogging: true })`. In particular `enableReactivityWarnings` reports every reactivity created outside a component, which by design includes the effects that services obtained with `inject` set up in their constructors.
 
 For finer control, `ChispaDebugConfig` is a mutable object that can be changed at any time:
 
-| Property                        | Default | Effect                                                                                                                                                                                                                 |
-| ------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enableMissingBindingWarnings`  | `false` | Warns when a `data-cb` has no binding at any level and is therefore not rendered. Enabled by `enableDebugging()`. See [Unbound `data-cb`](#unbound-data-cb).                                                           |
-| `enableInertReactivityWarnings` | `false` | Warns when a `computed`, `effect` or function-valued binding reads no signal on its first evaluation and will therefore never re-run. Enabled by `enableDebugging()`. See [Dependency tracking](#dependency-tracking). |
-| `enableReactivityWarnings`      | `false` | Warns when a reactivity (`computed`, `effect`, binding) is created outside of any component or reactive scope; useful to find subscriptions that will never be released.                                               |
-| `enableMountLogging`            | `false` | Logs every component mount and unmount to the console, together with the component instance (nodes, key, props), to follow the lifecycle of a tree.                                                                    |
+| Property                           | Default | Effect                                                                                                                                                                                                                    |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enableMissingBindingWarnings`     | `false` | Warns when a `data-cb` has no binding at any level and is therefore not rendered. Enabled by `enableDebugging()`. See [Unbound `data-cb`](#unbound-data-cb).                                                              |
+| `enableInertReactivityWarnings`    | `false` | Warns when a `computed`, `effect` or function-valued binding reads no signal on its first evaluation and will therefore never re-run. Enabled by `enableDebugging()`. See [Dependency tracking](#dependency-tracking).    |
+| `enableReactivityWarnings`         | `false` | Warns when a reactivity (`computed`, `effect`, binding) is created outside of any component or reactive scope; useful to find subscriptions that will never be released.                                                  |
+| `enableMountLogging`               | `false` | Logs every component mount and unmount to the console, together with the component instance (nodes, key, props), to follow the lifecycle of a tree.                                                                       |
+| `enableMissingTranslationWarnings` | `false` | Warns once per key and language when the catalog of the current language has no (non-empty) value for a key, so the source text is shown instead. Enabled by `enableDebugging()`. See [Translations](#translations-i18n). |
 
 ## API Reference
 
@@ -452,6 +506,10 @@ Binds an input or textarea to a signal in a controlled way. Supports `transform`
 
 Global service container. See [Dependency injection](#dependency-injection-provide--inject).
 
+### `lang` / `registerTranslations(locale, catalog)` / `t(key, params?)` / `translate(key, params?)` / `resetTranslations()`
+
+Translations: the current-language signal, catalog registration and the reactive and plain message lookups. See [Translations](#translations-i18n).
+
 ### `ChispaDebugConfig` / `enableDebugging(overrides?)`
 
 Engine development diagnostics, all off by default; `enableDebugging()` turns on the reliable ones in a single call. See [Debugging](#debugging-chispadebugconfig).
@@ -468,4 +526,4 @@ ChispaConfig.maxScheduleIterations = 200;
 
 ### Internal exports
 
-`getItem`, `getValidProps`, `setAttributes` and `setProps` are exported because the code generated by the HTML compiler imports them. They are **not** part of the stable public API: they ship in lockstep with the compiler and may change in minor versions. Build on `component`, `mountRoot`, `appendChild`, the template builders and the primitives above instead.
+`getItem`, `getValidProps`, `setAttributes`, `setProps`, `i18nText` and `i18nAttr` are exported because the code generated by the HTML compiler imports them. They are **not** part of the stable public API: they ship in lockstep with the compiler and may change in minor versions. Build on `component`, `mountRoot`, `appendChild`, the template builders and the primitives above instead.

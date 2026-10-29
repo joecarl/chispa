@@ -22,6 +22,7 @@ describe('ChispaDebugConfig', () => {
 
 			expect(ChispaDebugConfig.enableMissingBindingWarnings).toBe(true);
 			expect(ChispaDebugConfig.enableInertReactivityWarnings).toBe(true);
+			expect(ChispaDebugConfig.enableMissingTranslationWarnings).toBe(true);
 			expect(ChispaDebugConfig.enableReactivityWarnings).toBe(false);
 			expect(ChispaDebugConfig.enableMountLogging).toBe(false);
 		});

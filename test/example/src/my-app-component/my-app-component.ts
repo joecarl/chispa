@@ -1,4 +1,4 @@
-import { component, Link, Router, pathMatches, signal } from 'chispa';
+import { component, Link, Router, lang, pathMatches, t } from 'chispa';
 import { DemoTable } from '../demo-table-component/demo-table-component';
 import { DemoForm } from '../demo-form-component/demo-form-component';
 import { DemoNested } from '../demo-nested-component/demo-nested-component';
@@ -16,16 +16,21 @@ export const MyApp = component(() => {
 	];
 
 	// Al usar datos estaticos, podemos crear una lista de componentes Link sin necesidad de
-	// usar componentList, ya que no hay reactividad en la lista.
+	// usar componentList, ya que no hay reactividad en la lista. El texto de cada enlace
+	// sí es reactivo: t() devuelve un signal que sigue al idioma actual.
 	const links = linksData.map((link) =>
 		Link({
 			to: link.to,
-			inner: link.inner,
+			inner: t(link.inner),
 			classes: { 'active-link': pathMatches(link.to) },
 		})
 	);
 
 	return tpl.fragment({
+		langBtn: {
+			inner: () => (lang.get() === 'en' ? 'Español' : 'English'),
+			onclick: () => lang.update((current) => (current === 'en' ? 'es' : 'en')),
+		},
 		links: { inner: links },
 		routerAnchor: Router({
 			routes: [

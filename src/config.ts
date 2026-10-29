@@ -17,11 +17,13 @@ export const ChispaDebugConfig = {
 	enableInertReactivityWarnings: false,
 	// Logs every component mount and unmount to the console
 	enableMountLogging: false,
+	// Warns when the catalog of the current language has no (non-empty) value for a key, so the source text is shown instead
+	enableMissingTranslationWarnings: false,
 };
 
 /**
  * Turns on the development warnings that are reliable in any application (missing
- * `data-cb` bindings and inert reactivities). The noisier diagnostics
+ * `data-cb` bindings, inert reactivities and missing translations). The noisier diagnostics
  * (`enableReactivityWarnings`, `enableMountLogging`) stay off unless passed in
  * `overrides`.
  *
@@ -34,6 +36,7 @@ export function enableDebugging(overrides: Partial<typeof ChispaDebugConfig> = {
 	Object.assign(ChispaDebugConfig, {
 		enableMissingBindingWarnings: true,
 		enableInertReactivityWarnings: true,
+		enableMissingTranslationWarnings: true,
 		...overrides,
 	});
 }

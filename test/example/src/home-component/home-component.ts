@@ -1,4 +1,4 @@
-import { component, computed, type Signal, signal } from 'chispa';
+import { component, computed, type Signal, signal, translate } from 'chispa';
 import tpl from './home-component.html';
 
 interface IDivSimpaticoProps {
@@ -6,14 +6,15 @@ interface IDivSimpaticoProps {
 }
 
 const DivSimpatico = component<IDivSimpaticoProps>((props) => {
+	// translate() reads the `lang` signal, so this computed also follows the language
 	const text = computed(() => {
 		const length = props.length.get();
 		if (length < 2) return '?';
-		if (length < 5) return 'Sigue';
-		if (length < 9) return 'Sigue, sigue';
-		if (length < 15) return 'Nada mal, continúa';
-		if (length < 20) return 'Suficiente';
-		return 'No te esfuerces más, puedo oler la asíntota.';
+		if (length < 5) return translate('Sigue');
+		if (length < 9) return translate('Sigue, sigue');
+		if (length < 15) return translate('Nada mal, continúa');
+		if (length < 20) return translate('Suficiente');
+		return translate('No te esfuerces más, puedo oler la asíntota.');
 	});
 
 	const width = computed(() => {

@@ -11,3 +11,5 @@ export { Router, Link, navigate, pathMatches } from './router';
 export type { Route, LinkProps } from './router';
 export { ChispaConfig, ChispaDebugConfig, enableDebugging } from './config';
 export { inject, provide, resetServices, InjectionToken } from './injection';
+export { lang, registerTranslations, resetTranslations, t, translate, i18nText, i18nAttr } from './i18n';
+export type { TranslationCatalog, TranslationParams } from './i18n';
