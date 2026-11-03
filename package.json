@@ -47,8 +47,8 @@
 		"@types/jsdom": "^30.0.0",
 		"tsdown": "^0.23.1",
 		"typescript": "^7.0.2",
-		"vite": "^8.2.2",
-		"vitest": "^5.0.4"
+		"vite": "^8.3.5",
+		"vitest": "^5.1.0"
 	},
 	"bugs": {
 		"url": "https://github.com/joecarl/chispa/issues"
